@@ -2,15 +2,15 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 
+	commands "github.com/sohWenMing/pokedex/commands"
 	helpers "github.com/sohWenMing/pokedex/helpers"
-	// commands "github.com/sohWenMing/pokedex/commands"
 )
 
 var prompt string = "pokedex"
 var TrimToLower = helpers.TrimToLowerString
+var runCmdCallBack = commands.ActivateCallBack
 
 func pokeDexPrompt() {
 	helpers.PrintPrompt(prompt)
@@ -18,6 +18,7 @@ func pokeDexPrompt() {
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
+	var isExit bool
 
 	pokeDexPrompt()
 	//print the initial prompt
@@ -25,7 +26,10 @@ func main() {
 	for {
 		if scanner.Scan() {
 			text := TrimToLower(scanner.Text())
-			fmt.Printf("%q", text)
+			isExit = runCmdCallBack(text)
+			if isExit {
+				break
+			}
 			pokeDexPrompt()
 		}
 	}

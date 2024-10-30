@@ -2,31 +2,32 @@ package stringBuilder
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
-type GetPadLengthTest struct {
+type getPadLengthTest struct {
 	name          string
 	inputString   string
 	desiredLength int
 	expected      int
 }
 
-type GetLeftRightPadLengthsTest struct {
+type getLeftRightPadLengthsTest struct {
 	name     string
 	numToPad int
 	leftPad  int
 	rightPad int
 }
 
-type GetNumCharsToPadTest struct {
+type getNumCharsToPadTest struct {
 	name      string
 	padLength int
 	numSpaces int
 	expected  int
 }
 
-type GeneratePaddedStringTest struct {
+type generatePaddedStringTest struct {
 	name          string
 	inputString   string
 	expected      string
@@ -35,9 +36,16 @@ type GeneratePaddedStringTest struct {
 	desiredLength int
 }
 
+type generatePaddedStringInputs struct {
+	inputString   string
+	char          rune
+	numSpaces     int
+	desiredLength int
+}
+
 // ##### TEST FUNCTIONS ##### //
 func TestGetPadLength(t *testing.T) {
-	tests := []GetPadLengthTest{
+	tests := []getPadLengthTest{
 		{
 			name:          "basic test no need pad",
 			inputString:   "test this",
@@ -72,7 +80,7 @@ func TestGetPadLength(t *testing.T) {
 		})
 	}
 
-	negativeTest := GetPadLengthTest{
+	negativeTest := getPadLengthTest{
 		name:          "test negative",
 		inputString:   "👀",
 		desiredLength: 0,
@@ -86,7 +94,7 @@ func TestGetPadLength(t *testing.T) {
 }
 
 func TestGetLeftRightPadLengths(t *testing.T) {
-	positiveTests := []GetLeftRightPadLengthsTest{
+	positiveTests := []getLeftRightPadLengthsTest{
 		{
 			name:     "testing basic even",
 			numToPad: 4,
@@ -114,7 +122,7 @@ func TestGetLeftRightPadLengths(t *testing.T) {
 		})
 	}
 
-	negativeTest := GetLeftRightPadLengthsTest{
+	negativeTest := getLeftRightPadLengthsTest{
 		name:     "testing negative",
 		numToPad: -1000,
 		leftPad:  0,
@@ -129,7 +137,7 @@ func TestGetLeftRightPadLengths(t *testing.T) {
 }
 
 func TestGeneratePaddedString(t *testing.T) {
-	positiveTests := []GeneratePaddedStringTest{
+	positiveTests := []generatePaddedStringTest{
 		{
 			name:          "basic generate padded string test",
 			inputString:   "test",
@@ -138,6 +146,38 @@ func TestGeneratePaddedString(t *testing.T) {
 			numSpaces:     2,
 			desiredLength: 10,
 		},
+		{
+			name:          "testing emojis",
+			inputString:   "test",
+			expected:      "🤑  test  🤑",
+			char:          '🤑',
+			numSpaces:     2,
+			desiredLength: 10,
+		},
+		{
+			name:          "testing multiple chars",
+			inputString:   "test",
+			expected:      "🤑🤑🤑🤑  test  🤑🤑🤑🤑",
+			char:          '🤑',
+			numSpaces:     2,
+			desiredLength: 16,
+		},
+		{
+			name:          "testing odd spaces",
+			inputString:   "test",
+			expected:      "🤑🤑🤑  test  🤑🤑🤑🤑",
+			char:          '🤑',
+			numSpaces:     2,
+			desiredLength: 15,
+		},
+		{
+			name:          "testing blank string",
+			inputString:   "",
+			expected:      "🤑🤑🤑🤑🤑🤑    🤑🤑🤑🤑🤑🤑",
+			char:          '🤑',
+			numSpaces:     2,
+			desiredLength: 16,
+		},
 	}
 	for _, test := range positiveTests {
 		t.Run(test.name, func(t *testing.T) {
@@ -145,22 +185,12 @@ func TestGeneratePaddedString(t *testing.T) {
 				test.char, test.numSpaces, test.desiredLength)
 			assertStrings(got, test.expected, t)
 			assertNoError(err, t)
+			assertValues(len(got), len(test.expected), t)
 		})
 	}
 }
-
-func TestPrintString(t *testing.T) {
-	buf := &bytes.Buffer{}
-	input := "this is a test string"
-	err := PrintString(buf, input)
-	assertNoError(err, t)
-	got := buf.String()
-	expected := input
-	assertStrings(got, expected, t)
-}
-
 func TestGetNumCharsToPad(t *testing.T) {
-	positiveTest := GetNumCharsToPadTest{
+	positiveTest := getNumCharsToPadTest{
 		name:      "postive getNumCharsToPad test",
 		padLength: 5,
 		numSpaces: 4,
@@ -171,7 +201,7 @@ func TestGetNumCharsToPad(t *testing.T) {
 		assertNoError(err, t)
 		assertValues(got, positiveTest.expected, t)
 	})
-	negativeTest := GetNumCharsToPadTest{
+	negativeTest := getNumCharsToPadTest{
 		name:      "negative getNumCharsToPad test",
 		padLength: 5,
 		numSpaces: 6,
@@ -181,6 +211,46 @@ func TestGetNumCharsToPad(t *testing.T) {
 		_, err := getNumCharsToPad(negativeTest.padLength, negativeTest.numSpaces)
 		assertError(err, t)
 	})
+}
+
+func TestPrintString(t *testing.T) {
+	t.Run("testing one write to writer", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		input := "this is a test string"
+		err := PrintString(buf, input)
+		assertNoError(err, t)
+		got := buf.String()
+		expected := input
+		assertStrings(got, expected, t)
+	})
+	t.Run("testing multiple writes to writer", func(t *testing.T) {
+		padStringInputs := []generatePaddedStringInputs{
+			{
+				inputString:   "test",
+				char:          '#',
+				numSpaces:     2,
+				desiredLength: 10,
+			},
+			{
+				inputString:   "test",
+				char:          '🤑',
+				numSpaces:     4,
+				desiredLength: 20,
+			},
+		}
+		buf := &bytes.Buffer{}
+		got := ""
+		for _, input := range padStringInputs {
+			returnedString, err := GeneratePaddedString(input.inputString, input.char, input.numSpaces, input.desiredLength)
+			assertNoError(err, t)
+			stringToWrite := returnedString + "\n"
+			got += stringToWrite
+			fmt.Fprint(buf, stringToWrite)
+		}
+		assertStrings(got, buf.String(), t)
+
+	})
+
 }
 
 // ##### END TEST FUNCTIONS ##### //

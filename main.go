@@ -17,6 +17,7 @@ func pokeDexPrompt() {
 }
 
 func main() {
+	helpers.PrintInitialPrompt()
 	scanner := bufio.NewScanner(os.Stdin)
 	var isExit bool
 

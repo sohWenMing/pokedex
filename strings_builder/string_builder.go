@@ -65,8 +65,12 @@ func GeneratePaddedString(inputString string, char rune, numSpaces, desiredLengt
 		return "", err
 	}
 
-	leftPadString := strings.Repeat(string(char), leftNumChars) + strings.Repeat(" ", numSpaces)
-	rightPadString := strings.Repeat(" ", numSpaces) + strings.Repeat(string(char), rightNumChars)
+	red := "\033[31m"
+	reset := "\033[0m"
+	coloredChar := fmt.Sprintf("%s%c%s", red, char, reset)
+
+	leftPadString := strings.Repeat(coloredChar, leftNumChars) + strings.Repeat(" ", numSpaces)
+	rightPadString := strings.Repeat(" ", numSpaces) + strings.Repeat(coloredChar, rightNumChars)
 	return leftPadString + inputString + rightPadString, nil
 
 }

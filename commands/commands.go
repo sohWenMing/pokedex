@@ -11,7 +11,7 @@ import (
 type CliCommand struct {
 	Name        string
 	Description string
-	Callback    func(io.Writer, *apiconfig.Config) bool
+	Callback    func(w io.Writer, v *apiconfig.Config) bool
 }
 
 var (
@@ -23,6 +23,12 @@ var (
 	exitString            = "Thank you for using the Pokedex, see you next time!"
 	mapString             = "This is the map function being called"
 	mapBString            = "This is the mapB function being called"
+)
+
+// ########## messages to print to writer from functions ########## //
+var (
+	noMoreEntriesText   = "No more entries to show, going back to the beginning of entries"
+	connectionErrorText = "There was an error connecting to the pokedex, please try again later."
 )
 
 var (
@@ -108,22 +114,25 @@ func exitCallBack(w io.Writer, config *apiconfig.Config) (isExit bool) {
 }
 
 func mapCallBack(w io.Writer, config *apiconfig.Config) (isExit bool) {
-	if ApiConfig.Next == "" {
-		fmt.Println("No more entries to show, going back to the beginning of entries")
-
+	if config.Next == "" {
+		fmt.Fprintln(w, noMoreEntriesText)
+		config.Prev = ""
+		config.Next = originalUrl
+		return false
 	}
-	fmt.Fprintln(w, mapString)
+
 	response, err := apiconfig.GetLocation(config.Next, config)
 	if err != nil {
-		fmt.Printf("There was an error connecting to the pokedex, please try again later.")
+		fmt.Fprintln(w, connectionErrorText)
 	}
 	for i, result := range response.Results {
-		fmt.Printf("Result %d: %v\n", i, result)
+		fmt.Fprintf(w, "Result %d: %v\n", i+1, result)
 	}
+
 	return false
 }
 
-func mapBCallBack(w io.Writer) (isExit bool) {
+func mapBCallBack(w io.Writer, config *apiconfig.Config) (isExit bool) {
 	fmt.Fprintln(w, mapBString)
 	return false
 }

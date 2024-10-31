@@ -35,6 +35,16 @@ func TrimToLowerString(input string) string {
 	return input
 }
 
+func ReplaceNewLines(input string) string {
+	returnedString := strings.ReplaceAll(input, "\n", "")
+	return returnedString
+}
+
+func TrimString(input string) string {
+	returnedString := strings.TrimSpace(input)
+	return returnedString
+}
+
 func initPromptStrings() []string {
 
 	type paddedStringStruct struct {

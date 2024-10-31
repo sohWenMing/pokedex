@@ -27,7 +27,7 @@ func main() {
 	for {
 		if scanner.Scan() {
 			text := TrimToLower(scanner.Text())
-			isExit = runCmdCallBack(text)
+			isExit = runCmdCallBack(text, os.Stdout)
 			if isExit {
 				break
 			}

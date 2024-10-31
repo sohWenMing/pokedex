@@ -2,36 +2,26 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"log"
 )
 
 type CliCommand struct {
 	Name        string
 	Description string
-	Callback    func() bool
+	Callback    func(io.Writer) bool
 }
 
 var (
-	defaultHelpString = "help: Displays a help text"
-	defaultExitString = "exit: Exits the Pokedex"
-	usageHelpString   = "usage: "
+	mapDescriptionString  = "map: gets and displays 20 locations in the Pokemon universe"
+	mapBDescriptionString = "mapb: gets and displays the previous 20 locations in the Pokemon universe"
+	helpDescription       = "help: Displays a help text"
+	exitDescription       = "exit: Exits the Pokedex"
+	usageHeader           = "usage:"
+	exitString            = "Thank you for using the Pokedex, see you next time!"
+	mapString             = "This is the map function being called"
+	mapBString            = "This is the mapB function being called"
 )
-
-func helpCallBack() (isExit bool) {
-	fmt.Println(usageHelpString)
-	return false
-}
-
-func defaultCallBack() (isExit bool) {
-	fmt.Println(defaultHelpString)
-	fmt.Println(defaultExitString)
-	return false
-}
-
-func exitCallBack() (isExit bool) {
-	fmt.Println("Thank you for using the Pokedex, see you next time!")
-	return true
-}
 
 var (
 	helpCommand CliCommand = CliCommand{
@@ -49,17 +39,29 @@ var (
 		"this is to show the user usage suggestions if user does not key in a valid command",
 		defaultCallBack,
 	}
+	mapCommand CliCommand = CliCommand{
+		"map",
+		"this is to show 20 areas in the pokemon world",
+		mapCallBack,
+	}
+	mapBCommand CliCommand = CliCommand{
+		"mapb",
+		"this is for showing the 20 previous areas in the pokemono world",
+		mapBCallBack,
+	}
 )
 
 var CommandMap = map[string]CliCommand{
 	"help":  helpCommand,
 	"exit":  exitCommand,
 	"usage": defaultUsageCommand,
+	"map":   mapCommand,
+	"mapb":  mapBCommand,
 }
 
-func ActivateCallBack(text string) (isExit bool) {
+func ActivateCallBack(text string, w io.Writer) (isExit bool) {
 	command := GetCLICommand(text)
-	isExit = command.Callback()
+	isExit = command.Callback(w)
 	return isExit
 }
 
@@ -74,4 +76,34 @@ func GetCLICommand(text string) (command CliCommand) {
 
 	}
 	return command
+}
+func helpCallBack(w io.Writer) (isExit bool) {
+	fmt.Fprintln(w, usageHeader)
+	fmt.Fprintln(w, helpDescription)
+	fmt.Fprintln(w, exitDescription)
+	fmt.Fprintln(w, mapDescriptionString)
+	fmt.Fprintln(w, mapBDescriptionString)
+
+	return false
+}
+
+func defaultCallBack(w io.Writer) (isExit bool) {
+	fmt.Fprintln(w, helpDescription)
+	fmt.Fprintln(w, exitDescription)
+	return false
+}
+
+func exitCallBack(w io.Writer) (isExit bool) {
+	fmt.Fprintln(w, exitString)
+	return true
+}
+
+func mapCallBack(w io.Writer) (isExit bool) {
+	fmt.Fprintln(w, mapString)
+	return false
+}
+
+func mapBCallBack(w io.Writer) (isExit bool) {
+	fmt.Fprintln(w, mapBString)
+	return false
 }

@@ -1,4 +1,4 @@
-package apiintegration
+package apiIntegration
 
 import (
 	"fmt"

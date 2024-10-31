@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+
+	apiconfig "github.com/sohWenMing/pokedex/api_integration"
 )
 
 type CliCommand struct {
 	Name        string
 	Description string
-	Callback    func(io.Writer) bool
+	Callback    func(io.Writer, *apiconfig.Config) bool
 }
 
 var (
@@ -59,9 +61,16 @@ var CommandMap = map[string]CliCommand{
 	"mapb":  mapBCommand,
 }
 
+var originalUrl = "https://pokeapi.co/api/v2/location"
+
+var ApiConfig = apiconfig.Config{
+	Next: originalUrl,
+	Prev: "",
+}
+
 func ActivateCallBack(text string, w io.Writer) (isExit bool) {
 	command := GetCLICommand(text)
-	isExit = command.Callback(w)
+	isExit = command.Callback(w, &ApiConfig)
 	return isExit
 }
 
@@ -77,7 +86,7 @@ func GetCLICommand(text string) (command CliCommand) {
 	}
 	return command
 }
-func helpCallBack(w io.Writer) (isExit bool) {
+func helpCallBack(w io.Writer, config *apiconfig.Config) (isExit bool) {
 	fmt.Fprintln(w, usageHeader)
 	fmt.Fprintln(w, helpDescription)
 	fmt.Fprintln(w, exitDescription)
@@ -87,19 +96,30 @@ func helpCallBack(w io.Writer) (isExit bool) {
 	return false
 }
 
-func defaultCallBack(w io.Writer) (isExit bool) {
+func defaultCallBack(w io.Writer, config *apiconfig.Config) (isExit bool) {
 	fmt.Fprintln(w, helpDescription)
 	fmt.Fprintln(w, exitDescription)
 	return false
 }
 
-func exitCallBack(w io.Writer) (isExit bool) {
+func exitCallBack(w io.Writer, config *apiconfig.Config) (isExit bool) {
 	fmt.Fprintln(w, exitString)
 	return true
 }
 
-func mapCallBack(w io.Writer) (isExit bool) {
+func mapCallBack(w io.Writer, config *apiconfig.Config) (isExit bool) {
+	if ApiConfig.Next == "" {
+		fmt.Println("No more entries to show, going back to the beginning of entries")
+
+	}
 	fmt.Fprintln(w, mapString)
+	response, err := apiconfig.GetLocation(config.Next, config)
+	if err != nil {
+		fmt.Printf("There was an error connecting to the pokedex, please try again later.")
+	}
+	for i, result := range response.Results {
+		fmt.Printf("Result %d: %v\n", i, result)
+	}
 	return false
 }
 

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -29,6 +30,12 @@ var buf = &bytes.Buffer{}
 var replaceNewLines = helpers.ReplaceNewLines
 var trimString = helpers.TrimString
 
+var (
+	offsetTwentyUrl = "https://pokeapi.co/api/v2/location?offset=20&limit=20"
+	offsetFortyUrl  = "https://pokeapi.co/api/v2/location?offset=40&limit=20"
+	offsetZeroUrl   = "https://pokeapi.co/api/v2/location?offset=0&limit=20"
+)
+
 func TestGetCLICommand(t *testing.T) {
 
 	tests := []testStruct{
@@ -50,12 +57,6 @@ func TestGetCLICommand(t *testing.T) {
 			input:                  "exit",
 			expected:               exitCommand,
 			expectedStringsInprint: []string{exitString},
-		},
-		{
-			name:                   "testing mapB command",
-			input:                  "mapb",
-			expected:               mapBCommand,
-			expectedStringsInprint: []string{mapBString},
 		},
 	}
 
@@ -81,19 +82,59 @@ func TestMapCallBack(t *testing.T) {
 
 		//make the first call to the API, config should set a next
 		mapCallBack(buf, &testApiConfig)
-		assertStrings(testApiConfig.Next, "https://pokeapi.co/api/v2/location?offset=20&limit=20", t)
+		assertStrings(testApiConfig.Next, offsetTwentyUrl, t)
 		assertStrings(testApiConfig.Prev, "", t)
 
 		//make the second call, config should update next and prev
 		mapCallBack(buf, &testApiConfig)
-		assertStrings(testApiConfig.Next, "https://pokeapi.co/api/v2/location?offset=40&limit=20", t)
-		assertStrings(testApiConfig.Prev, "https://pokeapi.co/api/v2/location?offset=0&limit=20", t)
+		assertStrings(testApiConfig.Next, offsetFortyUrl, t)
+		assertStrings(testApiConfig.Prev, offsetZeroUrl, t)
 
 		resetBuffer()
 		//clear all the writes to the test buffer made by the prev api calls
 		testApiConfig.Next = ""
 		mapCallBack(buf, &testApiConfig)
 		assertStrings(trimString(replaceNewLines(buf.String())), noMoreEntriesText, t)
+		resetBuffer()
+	})
+
+	t.Run("testing that I am getting the correct number of responses", func(t *testing.T) {
+		resetTestApiConfig()
+		mapCallBack(buf, &testApiConfig)
+		var lines []string
+		scanner := bufio.NewScanner(buf)
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+		}
+		if err := scanner.Err(); err != nil {
+			t.Errorf("error occured during scanning: %s", err.Error())
+		}
+		if len(lines) != 20 {
+			t.Errorf("expected 20 lines, got %d lines", len(lines))
+		}
+
+	})
+
+}
+
+func TestMapBCallBack(t *testing.T) {
+	t.Run("testing that api config is being set correctly by mapBCallBack function", func(t *testing.T) {
+
+		resetTestApiConfig()
+		assertStrings(testApiConfig.Next, originalUrl, t)
+		assertStrings(testApiConfig.Prev, "", t)
+
+		//make tie first call to the API, should return noPrevEntriesText
+		mapBCallBack(buf, &testApiConfig)
+		assertStrings(trimString(replaceNewLines(buf.String())), noPrevEntriesText, t)
+		resetBuffer()
+
+		//first call map, then mapB
+		mapCallBack(buf, &testApiConfig)
+		mapBCallBack(buf, &testApiConfig)
+		assertStrings(testApiConfig.Next, offsetTwentyUrl, t)
+		assertStrings(testApiConfig.Prev, "", t)
+		resetBuffer()
 
 	})
 }

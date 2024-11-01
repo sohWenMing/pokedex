@@ -126,7 +126,7 @@ func mapCallBack(w io.Writer, config *apiconfig.Config) (isExit bool) {
 		fmt.Fprintln(w, connectionErrorText)
 	}
 	for i, result := range response.Results {
-		fmt.Fprintf(w, "Result %d: %v\n", i+1, result)
+		fmt.Fprintf(w, "Result %d: %v\n", i+1, result.Name)
 	}
 
 	return false

@@ -25,3 +25,10 @@ func AssertReflectDeepEqual(got, want any, t testing.TB) {
 		t.Errorf("\ngot: %v\nwant: %v", got, want)
 	}
 }
+
+func AssertNoError(err error, t testing.TB) {
+	t.Helper()
+	if err != nil {
+		t.Errorf("\ndidn't expect error, got %s", err.Error())
+	}
+}

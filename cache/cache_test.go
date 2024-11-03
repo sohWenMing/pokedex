@@ -8,51 +8,7 @@ import (
 	errorHelpers "github.com/sohWenMing/pokedex/test_error_helpers"
 )
 
-var assertVals = errorHelpers.AssertVals
 var AssertReflectDeepEqual = errorHelpers.AssertReflectDeepEqual
-
-func TestNewCache(t *testing.T) {
-	testDuration := 10 * time.Millisecond
-	cache := NewCache(testDuration)
-	counterChan := make(chan struct{})
-	doneChan := make(chan struct{})
-
-	counterVal := 0
-	var wg sync.WaitGroup
-	wg.Add(10)
-	//create a waitgroup that is waiting for 10 signals
-
-	go cache.ActivateCacheClear(counterChan, doneChan)
-
-	go func() {
-		for {
-			select {
-			case <-doneChan:
-				return
-			case <-counterChan:
-				counterVal++
-				wg.Done()
-			}
-		}
-	}()
-
-	timeout := time.After(2 * time.Second)
-
-	wgDoneChan := make(chan struct{})
-
-	go func() {
-		wg.Wait()
-		wgDoneChan <- struct{}{}
-	}()
-
-	select {
-	case <-timeout:
-		t.Errorf("Timeout occured before 10 counts could finish")
-	case <-wgDoneChan:
-		assertVals(counterVal, 10, t)
-	}
-
-}
 
 func TestWriteToCache(t *testing.T) {
 
@@ -62,13 +18,7 @@ func TestWriteToCache(t *testing.T) {
 		values []string
 	}
 
-	type testStruct struct {
-		name               string
-		testKeyValues      []keyValue
-		expectedUrlsToInfo map[string][]string
-	}
-
-	testKeyValues := []keyValue{
+	var testKeyValues = []keyValue{
 		{
 			key: "url1",
 			values: []string{
@@ -82,6 +32,13 @@ func TestWriteToCache(t *testing.T) {
 			},
 		},
 	}
+
+	type testStruct struct {
+		name               string
+		testKeyValues      []keyValue
+		expectedUrlsToInfo map[string][]string
+	}
+
 	tests := []testStruct{
 		{
 			name:          "write two unique values - no overwrite",
@@ -116,4 +73,55 @@ func TestWriteToCache(t *testing.T) {
 		})
 	}
 
+}
+
+func TestWriteAndClearingCache(t *testing.T) {
+
+	type keyValue struct {
+		key    string
+		values []string
+	}
+
+	var testKeyValues = []keyValue{
+		{
+			key: "url1",
+			values: []string{
+				"test string 1", "test string 2",
+			},
+		},
+		{
+			key: "url2",
+			values: []string{
+				"test string 3", "test string 4",
+			},
+		},
+	}
+	testDuration := 1 * time.Millisecond
+	//this should make the cache check every 10 seconds
+	cache := NewCache(testDuration)
+	doneChan := make(chan struct{})
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	go cache.ActivateCacheClear(doneChan)
+
+	for _, testKeyValue := range testKeyValues {
+		time.Sleep(600 * time.Millisecond)
+		cache.WriteToCache(testKeyValue.key, testKeyValue.values)
+		wg.Done()
+	}
+	wg.Wait()
+	doneChan <- struct{}{}
+
+	got := []keyValue{}
+	for key, cacheMapVal := range cache.cacheMap {
+		workingKeyValue := keyValue{
+			key:    key,
+			values: cacheMapVal.info,
+		}
+		got = append(got, workingKeyValue)
+	}
+	expected := []keyValue{}
+	expected = append(expected, testKeyValues[1])
+	AssertReflectDeepEqual(got, expected, t)
 }

@@ -31,7 +31,7 @@ func NewCache(cacheValidity time.Duration) *Cache {
 	return &returnedCache
 }
 
-func (c *Cache) ActivateCacheClear(counterChan, doneChan chan struct{}) {
+func (c *Cache) ActivateCacheClear(doneChan chan struct{}) {
 
 	ticker := time.NewTicker(c.cacheValidity)
 	tickerChan := make(chan struct{})
@@ -75,10 +75,8 @@ func (c *Cache) ActivateCacheClear(counterChan, doneChan chan struct{}) {
 				}
 			}
 			c.mu.Unlock()
-			counterChan <- struct{}{}
 
 		case <-doneChan:
-			close(counterChan)
 			return
 		}
 	}
@@ -89,7 +87,6 @@ func (c *Cache) ActivateCacheClear(counterChan, doneChan chan struct{}) {
 		- if signal is received from doneChan, closes the counterChan
 		  and exits the ActivateClearCache function through return
 	*/
-
 }
 
 func (c *Cache) WriteToCache(url string, values []string) {

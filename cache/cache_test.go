@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -9,86 +9,110 @@ import (
 )
 
 var assertVals = errorHelpers.AssertVals
+var AssertReflectDeepEqual = errorHelpers.AssertReflectDeepEqual
 
 func TestNewCache(t *testing.T) {
-	cache := NewCache(50 * time.Millisecond)
-	tickerChan := make(chan struct{})
+	testDuration := 10 * time.Millisecond
+	cache := NewCache(testDuration)
 	counterChan := make(chan struct{})
 	doneChan := make(chan struct{})
-	ticker := time.NewTicker(100 * time.Millisecond)
+
 	counterVal := 0
+	var wg sync.WaitGroup
+	wg.Add(10)
+	//create a waitgroup that is waiting for 10 signals
 
-	go ActivateCacheClear(cache, tickerChan, counterChan, doneChan)
+	go cache.ActivateCacheClear(counterChan, doneChan)
 
 	go func() {
-		for range ticker.C {
-			tickerChan <- struct{}{}
+		for {
+			select {
+			case <-doneChan:
+				return
+			case <-counterChan:
+				counterVal++
+				wg.Done()
+			}
 		}
 	}()
 
+	timeout := time.After(2 * time.Second)
+
+	wgDoneChan := make(chan struct{})
+
 	go func() {
-		for range counterChan {
-			counterVal++
-		}
-	}()
-	time.Sleep(1000 * time.Millisecond)
-	go func() {
-		doneChan <- struct{}{}
+		wg.Wait()
+		wgDoneChan <- struct{}{}
 	}()
 
-	assertVals(counterVal, 10, t)
+	select {
+	case <-timeout:
+		t.Errorf("Timeout occured before 10 counts could finish")
+	case <-wgDoneChan:
+		assertVals(counterVal, 10, t)
+	}
 
 }
 
 func TestWriteToCache(t *testing.T) {
-	cache := NewCache(0 * time.Second)
-	type testKeyValue struct {
+
+	//not testing for clearing of cache yet, validity doesn't matter
+	type keyValue struct {
 		key    string
 		values []string
 	}
+
 	type testStruct struct {
-		name          string
-		testKeyValues []testKeyValue
-		expected      [][]string
+		name               string
+		testKeyValues      []keyValue
+		expectedUrlsToInfo map[string][]string
 	}
 
-	expected_vals_set_1 := []string{
-		"value 1", "value 2",
-	}
-	expected_vals_set_2 := []string{
-		"value 3", "value 4",
-	}
-	test_one_key_values := []testKeyValue{
+	testKeyValues := []keyValue{
 		{
-			key:    "url 1",
-			values: expected_vals_set_1,
+			key: "url1",
+			values: []string{
+				"test string 1", "test string 2",
+			},
 		},
 		{
-			key:    "url 2",
-			values: expected_vals_set_2,
+			key: "url2",
+			values: []string{
+				"test string 3", "test string 4",
+			},
 		},
 	}
 	tests := []testStruct{
 		{
-			name:          "basic write test",
-			testKeyValues: test_one_key_values,
-			expected: [][]string{
-				expected_vals_set_1, expected_vals_set_2,
+			name:          "write two unique values - no overwrite",
+			testKeyValues: testKeyValues,
+			expectedUrlsToInfo: map[string][]string{
+				testKeyValues[0].key: testKeyValues[0].values,
+				testKeyValues[1].key: testKeyValues[1].values,
+			},
+		},
+		{
+			name:          "write same url twice, should overwrite",
+			testKeyValues: []keyValue{testKeyValues[0], testKeyValues[0]},
+			expectedUrlsToInfo: map[string][]string{
+				testKeyValues[0].key: testKeyValues[0].values,
 			},
 		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := [][]string{}
-			for _, keyVal := range test.testKeyValues {
-				WriteToCache(cache, keyVal.key, keyVal.values)
+			cache := NewCache(0 * time.Second)
+
+			for _, keyValue := range test.testKeyValues {
+				cache.WriteToCache(keyValue.key, keyValue.values)
+
 			}
-			for _, val := range cache.cacheMap {
-				got = append(got, val.info)
+			gotUrlsToInfo := make(map[string][]string)
+			for key, cacheMapVal := range cache.cacheMap {
+				gotUrlsToInfo[key] = cacheMapVal.info
 			}
-			if reflect.DeepEqual(got, test.expected) {
-				t.Errorf("\ngot: %v\nwant: %v", got, test.expected)
-			}
+			AssertReflectDeepEqual(gotUrlsToInfo, test.expectedUrlsToInfo, t)
 		})
 	}
 

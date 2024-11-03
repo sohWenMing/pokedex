@@ -31,28 +31,68 @@ func NewCache(cacheValidity time.Duration) *Cache {
 	return &returnedCache
 }
 
-func ActivateCacheClear(c *Cache, tickerChan, counterChan, doneChan chan struct{}) {
+func (c *Cache) ActivateCacheClear(counterChan, doneChan chan struct{}) {
 
+	ticker := time.NewTicker(c.cacheValidity)
+	tickerChan := make(chan struct{})
+	closeTickerChan := make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				tickerChan <- struct{}{}
+			case <-doneChan:
+				closeTickerChan <- struct{}{}
+				return
+			}
+		}
+	}()
+	/*
+		in each iter of for loop in goroutine:
+		- if signal is received from ticker.C, send signal to tickerChan
+		- if signal is received from doneChan, sends signal to closeTickerChan
+		  and then exit goroutine through return
+	*/
+
+	go func() {
+		<-closeTickerChan
+		close(tickerChan)
+		close(closeTickerChan)
+		/*
+			gorountine waits for the signal from closeTickerchan, and then
+			closes the tickerChan channel, and then closes the closeTickerChan
+			channel
+		*/
+	}()
 	for {
 		select {
-		case <-doneChan:
-			close(tickerChan)
-			close(counterChan)
-			return
 		case <-tickerChan:
 			c.mu.Lock()
-			for key, val := range c.cacheMap {
-				if time.Since(val.cachedOn) > c.cacheValidity {
+			for key, cacheMapVal := range c.cacheMap {
+				if time.Since(cacheMapVal.cachedOn) > c.cacheValidity {
 					delete(c.cacheMap, key)
 				}
 			}
-			counterChan <- struct{}{}
 			c.mu.Unlock()
+			counterChan <- struct{}{}
+
+		case <-doneChan:
+			close(counterChan)
+			return
 		}
 	}
+	/*
+		in each iter of for loop:
+		- if signal is received from tickerChan, checks validity of cached
+		  values and deletes values whose validity has passed
+		- if signal is received from doneChan, closes the counterChan
+		  and exits the ActivateClearCache function through return
+	*/
+
 }
 
-func WriteToCache(c *Cache, url string, values []string) {
+func (c *Cache) WriteToCache(url string, values []string) {
 	cacheMapVal := cacheMapVal{
 		info:     values,
 		cachedOn: time.Now(),

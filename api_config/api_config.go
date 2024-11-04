@@ -2,7 +2,6 @@ package apiconfig
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -58,32 +57,23 @@ func (a *ApiConfig) resetConfig() {
 	a.prev = ""
 }
 
-func (a *ApiConfig) callNextURL(c *cache.Cache) (next, prev string, info []string, err error) {
-	if a.next == "" {
-		a.resetConfig()
-		return "", "", blankInfo, errors.New("no more values to show, resetting.")
-	}
-	//first, check the cache
-	valuesFromCache, errFromCache := c.GetFromCache(a.next)
-	if errFromCache == nil {
-		return
-	}
+func (a *ApiConfig) callNextURL() (next, prev string, info []string, err error) {
 
 	res, err := http.Get(a.next)
 	checkErr := checkResponseErrAndStatus(res, err)
 	if checkErr != nil {
-		return blankInfo, checkErr
+		return "", "", blankInfo, checkErr
 	}
 	bodyBytes, readErr := io.ReadAll(res.Body)
 	if readErr != nil {
-		return blankInfo, readErr
+		return "", "", blankInfo, readErr
 	}
 	var jsonResponse JSONResponse
 	jsonErr := json.Unmarshal(bodyBytes, &jsonResponse)
 	if jsonErr != nil {
-		return blankInfo, jsonErr
+		return "", "", blankInfo, jsonErr
 	}
-	return jsonResponse, nil
+	return jsonResponse.Next, jsonResponse.Previous, jsonResponse.Results, nil
 }
 
 func checkResponseErrAndStatus(res *http.Response, errorFromGet error) (err error) {

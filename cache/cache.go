@@ -105,12 +105,12 @@ func (c *Cache) WriteToCache(url, next, prev string, values []string) {
 
 }
 
-func (c *Cache) GetFromCache(url string) (values []string, err error) {
+func (c *Cache) GetFromCache(url string) (next, prev string, values []string, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	cacheMapVal, ok := c.cacheMap[url]
 	if !ok {
-		return []string{}, fmt.Errorf("url: %s not found in cache", url)
+		return "", "", []string{}, fmt.Errorf("url: %s not found in cache", url)
 	}
-	return cacheMapVal.info, nil
+	return cacheMapVal.next, cacheMapVal.prev, cacheMapVal.info, nil
 }

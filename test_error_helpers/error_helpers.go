@@ -32,3 +32,10 @@ func AssertNoError(err error, t testing.TB) {
 		t.Errorf("\ndidn't expect error, got %s", err.Error())
 	}
 }
+
+func AssertError(err error, t testing.TB) {
+	t.Helper()
+	if err == nil {
+		t.Errorf("\nexpected error, didn't get one")
+	}
+}

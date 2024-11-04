@@ -35,6 +35,8 @@ var testVals = []valStruct{
 	},
 }
 var AssertReflectDeepEqual = errorHelpers.AssertReflectDeepEqual
+var AssertError = errorHelpers.AssertError
+var AssertNoError = errorHelpers.AssertNoError
 
 func TestWriteToCache(t *testing.T) {
 
@@ -124,4 +126,16 @@ func TestWriteAndClearingCache(t *testing.T) {
 	}
 
 	AssertReflectDeepEqual(got, expected, t)
+}
+
+func TestGetFromCache(t *testing.T) {
+	testDuration := 0 * time.Millisecond
+	cache := NewCache(testDuration)
+	_, err := cache.GetFromCache("should fail")
+	AssertError(err, t)
+	cache.WriteToCache(testVals[0].key, testVals[0].next, testVals[0].prev, testVals[0].values)
+	values, err := cache.GetFromCache(testVals[0].key)
+	AssertNoError(err, t)
+	AssertReflectDeepEqual(values, testVals[0].values, t)
+
 }

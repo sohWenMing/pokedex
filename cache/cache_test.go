@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -8,52 +9,53 @@ import (
 	errorHelpers "github.com/sohWenMing/pokedex/test_error_helpers"
 )
 
+type valStruct struct {
+	key    string
+	next   string
+	prev   string
+	values []string
+}
+
+var testVals = []valStruct{
+	{
+		key:  "url1",
+		next: "next",
+		prev: "prev",
+		values: []string{
+			"test string 1", "test string 2",
+		},
+	},
+	{
+		key:  "url2",
+		next: "next",
+		prev: "prev",
+		values: []string{
+			"test string 3", "test string 4",
+		},
+	},
+}
 var AssertReflectDeepEqual = errorHelpers.AssertReflectDeepEqual
 
 func TestWriteToCache(t *testing.T) {
 
 	//not testing for clearing of cache yet, validity doesn't matter
-	type keyValue struct {
-		key    string
-		values []string
-	}
-
-	var testKeyValues = []keyValue{
-		{
-			key: "url1",
-			values: []string{
-				"test string 1", "test string 2",
-			},
-		},
-		{
-			key: "url2",
-			values: []string{
-				"test string 3", "test string 4",
-			},
-		},
-	}
 
 	type testStruct struct {
-		name               string
-		testKeyValues      []keyValue
-		expectedUrlsToInfo map[string][]string
+		name         string
+		testVals     []valStruct
+		expectedVals []valStruct
 	}
 
 	tests := []testStruct{
 		{
-			name:          "write two unique values - no overwrite",
-			testKeyValues: testKeyValues,
-			expectedUrlsToInfo: map[string][]string{
-				testKeyValues[0].key: testKeyValues[0].values,
-				testKeyValues[1].key: testKeyValues[1].values,
-			},
+			name:         "write two unique values - no overwrite",
+			testVals:     testVals,
+			expectedVals: testVals,
 		},
 		{
-			name:          "write same url twice, should overwrite",
-			testKeyValues: []keyValue{testKeyValues[0], testKeyValues[0]},
-			expectedUrlsToInfo: map[string][]string{
-				testKeyValues[0].key: testKeyValues[0].values,
-			},
+			name:         "write same url twice, should overwrite",
+			testVals:     []valStruct{testVals[0], testVals[0]},
+			expectedVals: []valStruct{testVals[0]},
 		},
 	}
 
@@ -61,15 +63,28 @@ func TestWriteToCache(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			cache := NewCache(0 * time.Second)
 
-			for _, keyValue := range test.testKeyValues {
-				cache.WriteToCache(keyValue.key, keyValue.values)
+			for _, testVal := range test.testVals {
+				cache.WriteToCache(testVal.key, testVal.next, testVal.prev, testVal.values)
 
 			}
-			gotUrlsToInfo := make(map[string][]string)
-			for key, cacheMapVal := range cache.cacheMap {
-				gotUrlsToInfo[key] = cacheMapVal.info
+			gotVals := []valStruct{}
+			keys := []string{}
+			for key := range cache.cacheMap {
+				keys = append(keys, key)
 			}
-			AssertReflectDeepEqual(gotUrlsToInfo, test.expectedUrlsToInfo, t)
+			slices.Sort(keys)
+			for _, key := range keys {
+				cacheMapVal := cache.cacheMap[key]
+				valStruct := valStruct{
+					key:    key,
+					next:   cacheMapVal.next,
+					prev:   cacheMapVal.prev,
+					values: cacheMapVal.info,
+				}
+				gotVals = append(gotVals, valStruct)
+
+			}
+			AssertReflectDeepEqual(gotVals, test.expectedVals, t)
 		})
 	}
 
@@ -77,25 +92,6 @@ func TestWriteToCache(t *testing.T) {
 
 func TestWriteAndClearingCache(t *testing.T) {
 
-	type keyValue struct {
-		key    string
-		values []string
-	}
-
-	var testKeyValues = []keyValue{
-		{
-			key: "url1",
-			values: []string{
-				"test string 1", "test string 2",
-			},
-		},
-		{
-			key: "url2",
-			values: []string{
-				"test string 3", "test string 4",
-			},
-		},
-	}
 	testDuration := 1 * time.Millisecond
 	//this should make the cache check every 10 seconds
 	cache := NewCache(testDuration)
@@ -105,23 +101,27 @@ func TestWriteAndClearingCache(t *testing.T) {
 
 	go cache.ActivateCacheClear(doneChan)
 
-	for _, testKeyValue := range testKeyValues {
+	for _, testVal := range testVals {
 		time.Sleep(600 * time.Millisecond)
-		cache.WriteToCache(testKeyValue.key, testKeyValue.values)
+		cache.WriteToCache(testVal.key, testVal.next, testVal.prev, testVal.values)
 		wg.Done()
 	}
 	wg.Wait()
 	doneChan <- struct{}{}
 
-	got := []keyValue{}
+	got := []valStruct{}
 	for key, cacheMapVal := range cache.cacheMap {
-		workingKeyValue := keyValue{
+		valStruct := valStruct{
 			key:    key,
+			next:   cacheMapVal.next,
+			prev:   cacheMapVal.prev,
 			values: cacheMapVal.info,
 		}
-		got = append(got, workingKeyValue)
+		got = append(got, valStruct)
 	}
-	expected := []keyValue{}
-	expected = append(expected, testKeyValues[1])
+	expected := []valStruct{
+		testVals[1],
+	}
+
 	AssertReflectDeepEqual(got, expected, t)
 }

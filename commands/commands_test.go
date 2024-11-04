@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+	"time"
 
+	cache "github.com/sohWenMing/pokedex/cache"
 	testErrorHelpers "github.com/sohWenMing/pokedex/test_error_helpers"
 )
 
@@ -55,8 +57,9 @@ func TestGetCommand(t *testing.T) {
 }
 
 func TestDefaultCallBack(t *testing.T) {
+	cache := cache.NewCache(0 * time.Second)
 	buf := bytes.Buffer{}
-	defaultCallBack(&buf)
+	defaultCallBack(&buf, cache)
 	scanner := bufio.NewScanner(&buf)
 	got := []string{}
 

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -10,6 +11,8 @@ first build out a structure that maps a url to a list of strings
 */
 
 type cacheMapVal struct {
+	next     string
+	prev     string
 	info     []string
 	cachedOn time.Time
 }
@@ -89,8 +92,10 @@ func (c *Cache) ActivateCacheClear(doneChan chan struct{}) {
 	*/
 }
 
-func (c *Cache) WriteToCache(url string, values []string) {
+func (c *Cache) WriteToCache(url, next, prev string, values []string) {
 	cacheMapVal := cacheMapVal{
+		next:     next,
+		prev:     prev,
 		info:     values,
 		cachedOn: time.Now(),
 	}
@@ -98,4 +103,14 @@ func (c *Cache) WriteToCache(url string, values []string) {
 	defer c.mu.Unlock()
 	c.cacheMap[url] = cacheMapVal
 
+}
+
+func (c *Cache) GetFromCache(url string) (values []string, err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	cacheMapVal, ok := c.cacheMap[url]
+	if !ok {
+		return []string{}, fmt.Errorf("url: %s not found in cache", url)
+	}
+	return cacheMapVal.info, nil
 }

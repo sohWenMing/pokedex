@@ -7,7 +7,10 @@ import (
 	"testing"
 	"time"
 
+	apiconfig "github.com/sohWenMing/pokedex/api_config"
 	cache "github.com/sohWenMing/pokedex/cache"
+	colors_package "github.com/sohWenMing/pokedex/color_package"
+	prompts "github.com/sohWenMing/pokedex/prompts"
 	testErrorHelpers "github.com/sohWenMing/pokedex/test_error_helpers"
 )
 
@@ -56,10 +59,13 @@ func TestGetCommand(t *testing.T) {
 	}
 }
 
-func TestDefaultCallBack(t *testing.T) {
+func TestDefaultAndExitCallBack(t *testing.T) {
 	cache := cache.NewCache(0 * time.Second)
 	buf := bytes.Buffer{}
-	defaultCallBack(&buf, cache)
+	apiConfig := apiconfig.GenNewApiConfig()
+
+	//testing the printout from the default callback
+	defaultCallBack(&buf, cache, apiConfig)
 	scanner := bufio.NewScanner(&buf)
 	got := []string{}
 
@@ -71,5 +77,16 @@ func TestDefaultCallBack(t *testing.T) {
 	if !reflect.DeepEqual(got, defaultCallBackLines) {
 		t.Errorf("\n got: %v\nwant: %v", got, defaultCallBackLines)
 	}
+
+	//testing the printout from the exit callBack
+	exitBuf := bytes.Buffer{}
+	wantBuf := bytes.Buffer{}
+	exitCallBack(&exitBuf, cache, apiConfig)
+
+	gotExitPrompt := exitBuf.String()
+
+	colors_package.WriteRed(&wantBuf, prompts.GetExitPrompt())
+	wantExitPrompt := wantBuf.String()
+	assertStrings(gotExitPrompt, wantExitPrompt, t)
 
 }

@@ -45,22 +45,11 @@ func (a *ApiConfig) SetConfig(next, prev string) {
 	a.prev = prev
 }
 
-func (a *ApiConfig) GetNext() (next, prev string, results []JSONResult, err error) {
-	next, prev, results, callNextErr := a.callNextURL()
-	if callNextErr != nil {
-		return "", "", []JSONResult{}, callNextErr
-	}
-	a.next = next
-	a.prev = prev
-	return next, prev, results, nil
-
-}
-
 func (a *ApiConfig) resetConfig() {
 	a.SetConfig(startingURL, "")
 }
 
-func (a *ApiConfig) callNextURL() (next, prev string, results []JSONResult, err error) {
+func (a *ApiConfig) CallNextURL() (next, prev string, results []JSONResult, err error) {
 	if a.next == "" {
 		a.resetConfig()
 		return "", "", blankJsonResults, errors.New("no more locations to show ... resetting")
@@ -88,6 +77,7 @@ func (a *ApiConfig) callNextURL() (next, prev string, results []JSONResult, err 
 		}
 		jsonResults = append(jsonResults, jsonResult)
 	}
+	a.SetConfig(jsonResponse.Next, jsonResponse.Previous)
 	return jsonResponse.Next, jsonResponse.Previous, jsonResults, nil
 }
 

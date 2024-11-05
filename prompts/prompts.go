@@ -18,5 +18,10 @@ func PrintPokePrompt(w io.Writer) {
 }
 
 func PrintExitPrompt(w io.Writer) {
+
 	writeRed(w, exitPrompt)
+}
+
+func GetExitPrompt() string {
+	return exitPrompt
 }

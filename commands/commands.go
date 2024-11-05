@@ -57,7 +57,7 @@ func helpCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit b
 }
 
 func mapCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
-	fmt.Printf("getting information...")
+	fmt.Printf("getting information...\n")
 
 	// check the information in the cache
 	urlToCall := a.GetNext()

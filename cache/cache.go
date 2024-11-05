@@ -116,6 +116,5 @@ func (c *Cache) GetFromCache(url string) (values []MapValue, err error) {
 	if !ok {
 		return []MapValue{}, fmt.Errorf("url: %s not found in cache", url)
 	}
-	fmt.Printf("info: %v", cacheMapVal.info)
 	return cacheMapVal.info, nil
 }

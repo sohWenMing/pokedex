@@ -23,14 +23,14 @@ type JSONResponse struct {
 	} `json:"results"`
 }
 
-type JSONResult struct {
+type MapValue struct {
 	Name string
 	URL  string
 }
 
 const startingURL = "https://pokeapi.co/api/v2/location/"
 
-var blankJsonResults = []JSONResult{}
+var blankJsonResults = []MapValue{}
 
 func GenNewApiConfig() *ApiConfig {
 	apiConfig := ApiConfig{
@@ -49,7 +49,11 @@ func (a *ApiConfig) resetConfig() {
 	a.SetConfig(startingURL, "")
 }
 
-func (a *ApiConfig) CallNextURL() (next, prev string, results []JSONResult, err error) {
+func (a *ApiConfig) GetNext() string {
+	return a.next
+}
+
+func (a *ApiConfig) CallNextURL() (next, prev string, results []MapValue, err error) {
 	if a.next == "" {
 		a.resetConfig()
 		return "", "", blankJsonResults, errors.New("no more locations to show ... resetting")
@@ -69,14 +73,15 @@ func (a *ApiConfig) CallNextURL() (next, prev string, results []JSONResult, err 
 	if jsonErr != nil {
 		return "", "", blankJsonResults, jsonErr
 	}
-	jsonResults := []JSONResult{}
+	jsonResults := []MapValue{}
 	for _, result := range jsonResponse.Results {
-		jsonResult := JSONResult{
+		jsonResult := MapValue{
 			Name: result.Name,
 			URL:  result.URL,
 		}
 		jsonResults = append(jsonResults, jsonResult)
 	}
+
 	a.SetConfig(jsonResponse.Next, jsonResponse.Previous)
 	return jsonResponse.Next, jsonResponse.Previous, jsonResults, nil
 }

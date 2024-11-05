@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	apiConfig "github.com/sohWenMing/pokedex/api_config"
 )
+
+type MapValue = apiConfig.MapValue
 
 /*
 first build out a structure that maps a url to a list of strings
@@ -13,7 +17,7 @@ first build out a structure that maps a url to a list of strings
 type cacheMapVal struct {
 	next     string
 	prev     string
-	info     []string
+	info     []MapValue
 	cachedOn time.Time
 }
 type cacheMap map[string]cacheMapVal
@@ -92,7 +96,7 @@ func (c *Cache) ActivateCacheClear(doneChan chan struct{}) {
 	*/
 }
 
-func (c *Cache) WriteToCache(url, next, prev string, values []string) {
+func (c *Cache) WriteToCache(url, next, prev string, values []MapValue) {
 	cacheMapVal := cacheMapVal{
 		next:     next,
 		prev:     prev,
@@ -105,12 +109,13 @@ func (c *Cache) WriteToCache(url, next, prev string, values []string) {
 
 }
 
-func (c *Cache) GetFromCache(url string) (next, prev string, values []string, err error) {
+func (c *Cache) GetFromCache(url string) (values []MapValue, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	cacheMapVal, ok := c.cacheMap[url]
 	if !ok {
-		return "", "", []string{}, fmt.Errorf("url: %s not found in cache", url)
+		return []MapValue{}, fmt.Errorf("url: %s not found in cache", url)
 	}
-	return cacheMapVal.next, cacheMapVal.prev, cacheMapVal.info, nil
+	fmt.Printf("info: %v", cacheMapVal.info)
+	return cacheMapVal.info, nil
 }

@@ -3,8 +3,8 @@ package commands
 import (
 	"fmt"
 	"io"
+	"log"
 	"strings"
-	"time"
 
 	apiConfig "github.com/sohWenMing/pokedex/api_config"
 	cache "github.com/sohWenMing/pokedex/cache"
@@ -58,7 +58,39 @@ func helpCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit b
 
 func mapCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
 	fmt.Printf("getting information...")
-	time.Sleep(2 * time.Second)
+
+	// check the information in the cache
+	urlToCall := a.GetNext()
+	firstCacheCallValues, firstCacheCallErr := c.GetFromCache(urlToCall)
+
+	// if values exist in cache, print them
+	if firstCacheCallErr == nil {
+		for _, value := range firstCacheCallValues {
+			fmt.Fprintln(w, value.Name)
+		}
+		return false
+	}
+	next, prev, firstCacheCallValues, callErr := a.CallNextURL()
+
+	//if error happens during API call, return error
+	if callErr != nil {
+		fmt.Fprintln(w, callErr.Error())
+	}
+
+	//write values returned from API call to cache
+	c.WriteToCache(urlToCall, next, prev, firstCacheCallValues)
+
+	secondCacheCallValues, secondCacheCallErr := c.GetFromCache(urlToCall)
+
+	if secondCacheCallErr != nil {
+		log.Fatal("problem with caching mechanism")
+	}
+	for _, value := range secondCacheCallValues {
+		fmt.Fprintln(w, value.Name)
+	}
+
+	//if info does not exit in cache, get from calling api
+
 	return false
 }
 

@@ -13,7 +13,7 @@ type valStruct struct {
 	key    string
 	next   string
 	prev   string
-	values []string
+	values []MapValue
 }
 
 var testVals = []valStruct{
@@ -21,20 +21,35 @@ var testVals = []valStruct{
 		key:  "url1",
 		next: "next",
 		prev: "prev",
-		values: []string{
-			"test string 1", "test string 2",
+		values: []MapValue{
+			{
+				Name: "test string 1",
+				URL:  "url1",
+			},
+			{
+				Name: "test string 2",
+				URL:  "url2",
+			},
 		},
 	},
 	{
 		key:  "url2",
 		next: "next",
 		prev: "prev",
-		values: []string{
-			"test string 3", "test string 4",
+		values: []MapValue{
+			{
+				Name: "test string 3",
+				URL:  "url3",
+			},
+			{
+				Name: "test string 4",
+				URL:  "url4",
+			},
 		},
 	},
 }
-var assertStrings = errorHelpers.AssertStrings
+
+// var assertStrings = errorHelpers.AssertStrings
 var assertReflectDeepEqual = errorHelpers.AssertReflectDeepEqual
 var assertError = errorHelpers.AssertError
 var assertNoError = errorHelpers.AssertNoError
@@ -132,12 +147,11 @@ func TestWriteAndClearingCache(t *testing.T) {
 func TestGetFromCache(t *testing.T) {
 	testDuration := 0 * time.Millisecond
 	cache := NewCache(testDuration)
-	_, _, _, err := cache.GetFromCache("should fail")
+	_, err := cache.GetFromCache("should fail")
 	assertError(err, t)
 	cache.WriteToCache(testVals[0].key, testVals[0].next, testVals[0].prev, testVals[0].values)
-	next, prev, values, err := cache.GetFromCache(testVals[0].key)
+	values, err := cache.GetFromCache(testVals[0].key)
 	assertNoError(err, t)
 	assertReflectDeepEqual(values, testVals[0].values, t)
-	assertStrings(next, testVals[0].next, t)
-	assertStrings(prev, testVals[0].prev, t)
+
 }

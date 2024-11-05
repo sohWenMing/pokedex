@@ -53,13 +53,35 @@ func (a *ApiConfig) GetNext() string {
 	return a.next
 }
 
-func (a *ApiConfig) CallNextURL() (next, prev string, results []MapValue, err error) {
-	if a.next == "" {
-		a.resetConfig()
-		return "", "", blankJsonResults, errors.New("no more locations to show ... resetting")
+func (a *ApiConfig) GetPrev() string {
+	return a.prev
+}
+
+func (a *ApiConfig) CallUrl(isNext bool) (next, prev string, results []MapValue, err error) {
+
+	if isNext {
+		if a.next == "" {
+			a.resetConfig()
+			return "", "", blankJsonResults, errors.New("no more locations to show ... resetting")
+		}
 	}
 
-	res, err := http.Get(a.next)
+	if !isNext {
+		if a.prev == "" {
+			return "", "", blankJsonResults, errors.New("no previous locations to show")
+		}
+	}
+
+	var urlToCall string
+
+	switch isNext {
+	case true:
+		urlToCall = a.GetNext()
+	case false:
+		urlToCall = a.GetPrev()
+	}
+
+	res, err := http.Get(urlToCall)
 	checkErr := checkResponseErrAndStatus(res, err)
 	if checkErr != nil {
 		return "", "", blankJsonResults, checkErr

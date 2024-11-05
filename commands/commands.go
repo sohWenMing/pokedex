@@ -70,7 +70,7 @@ func mapCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bo
 		}
 		return false
 	}
-	next, prev, firstCacheCallValues, callErr := a.CallNextURL()
+	next, prev, firstCacheCallValues, callErr := a.CallUrl(true)
 
 	//if error happens during API call, return error
 	if callErr != nil {

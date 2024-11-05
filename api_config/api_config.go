@@ -2,11 +2,10 @@ package apiconfig
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
-
-	cache "github.com/sohWenMing/pokedex/cache"
 )
 
 type ApiConfig struct {
@@ -24,9 +23,14 @@ type JSONResponse struct {
 	} `json:"results"`
 }
 
+type JSONResult struct {
+	Name string
+	URL  string
+}
+
 const startingURL = "https://pokeapi.co/api/v2/location/"
 
-var blankInfo = []string{}
+var blankJsonResults = []JSONResult{}
 
 func GenNewApiConfig() *ApiConfig {
 	apiConfig := ApiConfig{
@@ -41,39 +45,50 @@ func (a *ApiConfig) SetConfig(next, prev string) {
 	a.prev = prev
 }
 
-func (a *ApiConfig) GetNext(c *cache.Cache) (info []string, err error) {
-	next, prev, info, callNextErr := a.callNextURL(c)
+func (a *ApiConfig) GetNext() (next, prev string, results []JSONResult, err error) {
+	next, prev, results, callNextErr := a.callNextURL()
 	if callNextErr != nil {
-		return blankInfo, callNextErr
+		return "", "", []JSONResult{}, callNextErr
 	}
 	a.next = next
 	a.prev = prev
-	return info, nil
+	return next, prev, results, nil
 
 }
 
 func (a *ApiConfig) resetConfig() {
-	a.next = startingURL
-	a.prev = ""
+	a.SetConfig(startingURL, "")
 }
 
-func (a *ApiConfig) callNextURL() (next, prev string, info []string, err error) {
+func (a *ApiConfig) callNextURL() (next, prev string, results []JSONResult, err error) {
+	if a.next == "" {
+		a.resetConfig()
+		return "", "", blankJsonResults, errors.New("no more locations to show ... resetting")
+	}
 
 	res, err := http.Get(a.next)
 	checkErr := checkResponseErrAndStatus(res, err)
 	if checkErr != nil {
-		return "", "", blankInfo, checkErr
+		return "", "", blankJsonResults, checkErr
 	}
 	bodyBytes, readErr := io.ReadAll(res.Body)
 	if readErr != nil {
-		return "", "", blankInfo, readErr
+		return "", "", blankJsonResults, readErr
 	}
 	var jsonResponse JSONResponse
 	jsonErr := json.Unmarshal(bodyBytes, &jsonResponse)
 	if jsonErr != nil {
-		return "", "", blankInfo, jsonErr
+		return "", "", blankJsonResults, jsonErr
 	}
-	return jsonResponse.Next, jsonResponse.Previous, jsonResponse.Results, nil
+	jsonResults := []JSONResult{}
+	for _, result := range jsonResponse.Results {
+		jsonResult := JSONResult{
+			Name: result.Name,
+			URL:  result.URL,
+		}
+		jsonResults = append(jsonResults, jsonResult)
+	}
+	return jsonResponse.Next, jsonResponse.Previous, jsonResults, nil
 }
 
 func checkResponseErrAndStatus(res *http.Response, errorFromGet error) (err error) {

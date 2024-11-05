@@ -32,20 +32,24 @@ func TestResetAPIConfigOnNext(t *testing.T) {
 func TestGetNext(t *testing.T) {
 	apiConfig := GenNewApiConfig()
 
-	res, err := apiConfig.GetNext()
+	next, prev, results, err := apiConfig.GetNext()
 	// call the API once, get the next 20 records
 	assertNoError(err, t)
 	assertStrings(apiConfig.next, urlPage2, t)
+	assertStrings(next, apiConfig.next, t)
 	//in the config, next should now be pointing to page 2
 	assertStrings(apiConfig.prev, blankURL, t)
+	assertStrings(prev, apiConfig.prev, t)
 	//in the config, prev should still in blank
-	assertVals(len(res.Results), 20, t)
+	assertVals(len(results), 20, t)
 
-	res2, err2 := apiConfig.GetNext()
+	next2, prev2, results2, err2 := apiConfig.GetNext()
 	assertNoError(err2, t)
 	assertStrings(apiConfig.next, urlPage3, t)
+	assertStrings(next2, apiConfig.next, t)
 	//in the config, next should now be pointing to page 3
 	assertStrings(apiConfig.prev, urlPage1, t)
+	assertStrings(prev2, apiConfig.prev, t)
 	//in the config, prev should now be pointing to the starting url
-	assertVals(len(res2.Results), 20, t)
+	assertVals(len(results2), 20, t)
 }

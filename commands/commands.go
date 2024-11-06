@@ -57,40 +57,20 @@ func helpCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit b
 }
 
 func mapCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
-	fmt.Printf("getting information...\n")
+	fmt.Fprintf(w, "getting information...\n")
 
 	// check the information in the cache
 	urlToCall := a.GetNext()
-	firstCacheCallValues, firstCacheCallErr := c.GetFromCache(urlToCall)
+	outputValues(urlToCall, true, w, c, a)
 
-	// if values exist in cache, print them
-	if firstCacheCallErr == nil {
-		for _, value := range firstCacheCallValues {
-			fmt.Fprintln(w, value.Name)
-		}
-		return false
-	}
-	next, prev, firstCacheCallValues, callErr := a.CallUrl(true)
+	return false
+}
 
-	//if error happens during API call, return error
-	if callErr != nil {
-		fmt.Fprintln(w, callErr.Error())
-	}
+func mapBCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
+	fmt.Fprintf(w, "getting information...\n")
 
-	//write values returned from API call to cache
-	c.WriteToCache(urlToCall, next, prev, firstCacheCallValues)
-
-	secondCacheCallValues, secondCacheCallErr := c.GetFromCache(urlToCall)
-
-	if secondCacheCallErr != nil {
-		log.Fatal("problem with caching mechanism")
-	}
-	for _, value := range secondCacheCallValues {
-		fmt.Fprintln(w, value.Name)
-	}
-
-	//if info does not exit in cache, get from calling api
-
+	urlToCall := a.GetPrev()
+	outputValues(urlToCall, false, w, c, a)
 	return false
 }
 
@@ -99,6 +79,7 @@ var (
 	exitCommand    = command{"exit", exitCallBack}
 	defaultCommand = command{"default", defaultCallBack}
 	mapCommand     = command{"map", mapCallBack}
+	mapBCommand    = command{"mapb", mapBCallBack}
 )
 
 var commandMap = map[string]command{
@@ -106,6 +87,7 @@ var commandMap = map[string]command{
 	"exit":    exitCommand,
 	"default": defaultCommand,
 	"map":     mapCommand,
+	"mapb":    mapBCommand,
 }
 
 func GetCommand(input string) command {
@@ -121,5 +103,39 @@ func GetCommand(input string) command {
 func printLines(w io.Writer, strings []string) {
 	for _, line := range strings {
 		fmt.Fprintln(w, line)
+	}
+}
+
+func outputValues(urlToCall string, isNext bool, w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) {
+
+	//if the values can be found in the cache, the write to the writer and exit early
+	next, prev, firstCacheCallValues, firstCacheCallErr := c.GetFromCache(urlToCall)
+	if firstCacheCallErr == nil {
+		for _, value := range firstCacheCallValues {
+			fmt.Fprintln(w, value.Name)
+		}
+		a.SetConfig(next, prev)
+		return
+	}
+
+	next, prev, values, callErr := a.CallUrl(isNext)
+	// if error occured during the API call dur to connection, print the error and return
+	if callErr != nil {
+		fmt.Fprintln(w, callErr.Error())
+		return
+	}
+	a.SetConfig(next, prev)
+
+	c.WriteToCache(urlToCall, next, prev, values)
+
+	_, _, secondCacheCallValues, secondCacheCallErr := c.GetFromCache(urlToCall)
+
+	// at this point, if there are still values in the cache, program should crash and investigation should happen
+	if secondCacheCallErr != nil {
+		log.Fatal("problem with caching mechanism")
+	}
+
+	for _, value := range secondCacheCallValues {
+		fmt.Fprintln(w, value.Name)
 	}
 }

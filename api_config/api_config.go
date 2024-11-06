@@ -57,6 +57,14 @@ func (a *ApiConfig) GetPrev() string {
 	return a.prev
 }
 
+func (a *ApiConfig) SetNext(next string) {
+	a.next = next
+}
+
+func (a *ApiConfig) SetPrev(prev string) {
+	a.prev = prev
+}
+
 func (a *ApiConfig) CallUrl(isNext bool) (next, prev string, results []MapValue, err error) {
 
 	if isNext {
@@ -104,7 +112,6 @@ func (a *ApiConfig) CallUrl(isNext bool) (next, prev string, results []MapValue,
 		jsonResults = append(jsonResults, jsonResult)
 	}
 
-	a.SetConfig(jsonResponse.Next, jsonResponse.Previous)
 	return jsonResponse.Next, jsonResponse.Previous, jsonResults, nil
 }
 

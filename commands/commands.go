@@ -139,3 +139,19 @@ func outputValues(urlToCall string, isNext bool, w io.Writer, c *cache.Cache, a 
 		fmt.Fprintln(w, value.Name)
 	}
 }
+
+func checkIsExploreCommand(input string) (isExplore bool, isHasLocation bool) {
+	if input == "explore" {
+		isExplore = true
+		isHasLocation = false
+		return
+	}
+	if strings.HasPrefix(input, "explore ") {
+		isExplore = true
+		isHasLocation = true
+		return
+	}
+	isExplore = false
+	isHasLocation = false
+	return
+}

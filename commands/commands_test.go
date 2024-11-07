@@ -126,3 +126,49 @@ func TestMapCallBack(t *testing.T) {
 	testErrorHelpers.AssertVals(len(locationValues), 20, t)
 
 }
+
+func TestExplore(t *testing.T) {
+	type resultsStruct struct {
+		isExplore     bool
+		isHasLocation bool
+	}
+
+	type testStruct struct {
+		name     string
+		input    string
+		expected resultsStruct
+	}
+
+	tests := []testStruct{
+		{
+			name:  "explore with no suffix",
+			input: "explore",
+			expected: resultsStruct{
+				isExplore:     true,
+				isHasLocation: false,
+			},
+		},
+		{
+			name:  "explore with suffix",
+			input: "explore suffix",
+			expected: resultsStruct{
+				isExplore:     true,
+				isHasLocation: true,
+			},
+		},
+		{
+			name:  "not explore",
+			input: "not explore",
+			expected: resultsStruct{
+				isExplore:     false,
+				isHasLocation: false,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		isExplore, isHasLocation := checkIsExploreCommand(test.input)
+		got := resultsStruct{isExplore, isHasLocation}
+		testErrorHelpers.AssertReflectDeepEqual(got, test.expected, t)
+	}
+}

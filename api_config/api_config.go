@@ -103,6 +103,7 @@ func (a *ApiConfig) CallUrl(isNext bool) (next, prev string, results []MapValue,
 	if jsonErr != nil {
 		return "", "", blankJsonResults, jsonErr
 	}
+
 	jsonResults := []MapValue{}
 	for _, result := range jsonResponse.Results {
 		jsonResult := MapValue{
@@ -111,6 +112,8 @@ func (a *ApiConfig) CallUrl(isNext bool) (next, prev string, results []MapValue,
 		}
 		jsonResults = append(jsonResults, jsonResult)
 	}
+
+	a.SetConfig(jsonResponse.Next, jsonResponse.Previous)
 
 	return jsonResponse.Next, jsonResponse.Previous, jsonResults, nil
 }

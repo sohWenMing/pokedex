@@ -147,10 +147,10 @@ func TestWriteAndClearingCache(t *testing.T) {
 func TestGetFromCache(t *testing.T) {
 	testDuration := 0 * time.Millisecond
 	cache := NewCache(testDuration)
-	_, err := cache.GetFromCache("should fail")
+	_, _, _, err := cache.GetFromCache("should fail")
 	assertError(err, t)
 	cache.WriteToCache(testVals[0].key, testVals[0].next, testVals[0].prev, testVals[0].values)
-	values, err := cache.GetFromCache(testVals[0].key)
+	_, _, values, err := cache.GetFromCache(testVals[0].key)
 	assertNoError(err, t)
 	assertReflectDeepEqual(values, testVals[0].values, t)
 

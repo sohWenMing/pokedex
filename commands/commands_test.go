@@ -98,7 +98,7 @@ func TestMapCallBack(t *testing.T) {
 	urlToCall := apiconfig.GetNext()
 
 	//first assert that there are no values tied to the URL
-	cacheCallValues, cacheCallErr := cache.GetFromCache(urlToCall)
+	_, _, cacheCallValues, cacheCallErr := cache.GetFromCache(urlToCall)
 	testErrorHelpers.AssertError(cacheCallErr, t)
 	testErrorHelpers.AssertReflectDeepEqual(cacheCallValues, []apiCfg.MapValue{}, t)
 
@@ -107,11 +107,22 @@ func TestMapCallBack(t *testing.T) {
 	//function should call the API, and write returned values to cache
 
 	scanner := bufio.NewScanner(&buf)
+
 	stringsFromCache := []string{}
 	for scanner.Scan() {
 		text := scanner.Text()
+
 		stringsFromCache = append(stringsFromCache, text)
 	}
-	testErrorHelpers.AssertVals(len(stringsFromCache), 20, t)
+
+	locationValues := []string{}
+	for i, location := range stringsFromCache {
+		if i == 0 {
+			assertStrings(location, "getting information...", t)
+			continue
+		}
+		locationValues = append(locationValues, location)
+	}
+	testErrorHelpers.AssertVals(len(locationValues), 20, t)
 
 }

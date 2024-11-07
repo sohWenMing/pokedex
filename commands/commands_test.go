@@ -167,8 +167,45 @@ func TestExplore(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		isExplore, isHasLocation := checkIsExploreCommand(test.input)
-		got := resultsStruct{isExplore, isHasLocation}
-		testErrorHelpers.AssertReflectDeepEqual(got, test.expected, t)
+
+		t.Run(test.name, func(t *testing.T) {
+			isExplore, isHasLocation := checkIsExploreCommand(test.input)
+			got := resultsStruct{isExplore, isHasLocation}
+			testErrorHelpers.AssertReflectDeepEqual(got, test.expected, t)
+		})
+	}
+}
+
+func TestGetCommandString(t *testing.T) {
+	type result struct {
+		commandString, location string
+	}
+	type testStruct struct {
+		name, input string
+		expected    result
+	}
+	tests := []testStruct{
+		{
+			name:     "test not explore",
+			input:    "not explore",
+			expected: result{"not explore", ""},
+		},
+		{
+			name:     "test is explore, no location",
+			input:    "explore",
+			expected: result{"explore", ""},
+		},
+		{
+			name:     "test is explore, has location",
+			input:    "explore this location",
+			expected: result{"explore", "this location"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			commandString, location := getCommandString(test.input)
+			got := result{commandString, location}
+			testErrorHelpers.AssertReflectDeepEqual(got, test.expected, t)
+		})
 	}
 }

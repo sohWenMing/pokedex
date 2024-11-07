@@ -8,6 +8,7 @@ import (
 
 	apiConfig "github.com/sohWenMing/pokedex/api_config"
 	cache "github.com/sohWenMing/pokedex/cache"
+	helpers "github.com/sohWenMing/pokedex/helpers"
 	prompts "github.com/sohWenMing/pokedex/prompts"
 )
 
@@ -91,7 +92,7 @@ var commandMap = map[string]command{
 }
 
 func GetCommand(input string) command {
-	formattedInput := strings.ToLower(strings.TrimSpace(input))
+	formattedInput := helpers.ToLowerAndTrim(input)
 
 	_, ok := commandMap[formattedInput]
 	if !ok {
@@ -153,5 +154,23 @@ func checkIsExploreCommand(input string) (isExplore bool, isHasLocation bool) {
 	}
 	isExplore = false
 	isHasLocation = false
+	return
+}
+
+func getCommandString(formattedInput string) (commandString, location string) {
+	isExplore, isHasLocation := checkIsExploreCommand(formattedInput)
+	if !isExplore {
+		commandString = formattedInput
+		location = ""
+		return
+	}
+	if isExplore && !isHasLocation {
+		commandString = "explore"
+		location = ""
+		return
+	}
+	splitStrings := strings.SplitAfterN(formattedInput, " ", 2)
+	commandString = helpers.ToLowerAndTrim(splitStrings[0])
+	location = helpers.ToLowerAndTrim(splitStrings[1])
 	return
 }

@@ -91,10 +91,20 @@ var commandMap = map[string]command{
 	"mapb":    mapBCommand,
 }
 
+func GetCommandAndFireCallBack(
+	inputString string,
+	w io.Writer,
+	c *cache.Cache,
+	a *apiConfig.ApiConfig) (isExit bool) {
+	command := GetCommand(inputString)
+	isExit = command.Callback(w, c, a)
+	return isExit
+}
+
 func GetCommand(input string) command {
 	formattedInput := helpers.ToLowerAndTrim(input)
-
-	_, ok := commandMap[formattedInput]
+	commandString, _ := getCommandString(formattedInput)
+	_, ok := commandMap[commandString]
 	if !ok {
 		return commandMap["default"]
 	}

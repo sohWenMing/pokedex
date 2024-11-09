@@ -12,7 +12,6 @@ import (
 )
 
 var scanner = bufio.NewScanner(os.Stdin)
-var getCommand = commands.GetCommand
 var pokeprompt = prompts.PrintPokePrompt
 
 func main() {
@@ -23,11 +22,15 @@ func main() {
 	for {
 		pokeprompt(os.Stdin)
 		if scanner.Scan() {
-			isExit := getCommand(scanner.Text()).Callback(os.Stdout, cache, apiconfig)
+			isExit := commands.GetCommandAndFireCallBack(
+				scanner.Text(),
+				os.Stdout,
+				cache,
+				apiconfig,
+			)
 			if isExit {
 				break
 			}
 		}
-
 	}
 }

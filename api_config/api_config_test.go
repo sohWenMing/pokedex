@@ -25,14 +25,14 @@ func TestResetAPIConfigOnNext(t *testing.T) {
 	apiConfig := GenNewApiConfig()
 	apiConfig.next = ""
 	assertStrings(apiConfig.next, "", t)
-	apiConfig.CallMapURL(true)
+	apiConfig.CallMapUrl(true)
 	assertStrings(apiConfig.next, startingURL, t)
 }
 
 func TestCallNextURL(t *testing.T) {
 	apiConfig := GenNewApiConfig()
 
-	next, prev, results, err := apiConfig.CallMapURL(true)
+	next, prev, results, err := apiConfig.CallMapUrl(true)
 	// call the API once, get the next 20 records
 	assertNoError(err, t)
 	assertStrings(apiConfig.next, urlPage2, t)
@@ -43,7 +43,7 @@ func TestCallNextURL(t *testing.T) {
 	//in the config, prev should still in blank
 	assertVals(len(results), 20, t)
 
-	next2, prev2, results2, err2 := apiConfig.CallMapURL(true)
+	next2, prev2, results2, err2 := apiConfig.CallMapUrl(true)
 	assertNoError(err2, t)
 	assertStrings(apiConfig.next, urlPage3, t)
 	assertStrings(next2, apiConfig.next, t)
@@ -58,24 +58,53 @@ func TestCallPrevUrl(t *testing.T) {
 	apiConfig := GenNewApiConfig()
 
 	//assert that trying to get prev url when it doesn't exist in the apiconfig yet should return an error
-	_, _, _, err := apiConfig.CallMapURL(false)
+	_, _, _, err := apiConfig.CallMapUrl(false)
 	errorHelpers.AssertError(err, t)
 
 	// call next on the first url, no error should be returned
-	firstNext, firstPrev, firstResults, firstCallErr := apiConfig.CallMapURL(true)
+	firstNext, firstPrev, firstResults, firstCallErr := apiConfig.CallMapUrl(true)
 	assertNoError(firstCallErr, t)
 
 	//at this point, prev should be null, as we are at the first page. should return error
-	_, _, _, errFromPrev := apiConfig.CallMapURL(false)
+	_, _, _, errFromPrev := apiConfig.CallMapUrl(false)
 	errorHelpers.AssertError(errFromPrev, t)
 
 	//call the API one more time to get to the second page
-	apiConfig.CallMapURL(true)
+	apiConfig.CallMapUrl(true)
 
-	secondNext, secondPrev, secondResults, secondCallErr := apiConfig.CallMapURL(false)
+	secondNext, secondPrev, secondResults, secondCallErr := apiConfig.CallMapUrl(false)
 	assertNoError(secondCallErr, t)
 	assertStrings(firstNext, secondNext, t)
 	assertStrings(firstPrev, secondPrev, t)
 	errorHelpers.AssertReflectDeepEqual(firstResults, secondResults, t)
 
+}
+
+func TestGetPokemonInfo(t *testing.T) {
+	type testStruct struct {
+		name               string
+		url                string
+		expectedNumResults int
+	}
+
+	pokemonInfoTests := []testStruct{
+		{
+			"should pass and get 151 records",
+			"https://pokeapi.co/api/v2/pokedex/5/",
+			151,
+		},
+		{
+			"should fail and get 0 records",
+			"https://you failed",
+			0,
+		},
+	}
+
+	for _, test := range pokemonInfoTests {
+		t.Run(test.name, func(t *testing.T) {
+			got := len(getPokemonInfo(test.url))
+			want := test.expectedNumResults
+			assertVals(got, want, t)
+		})
+	}
 }

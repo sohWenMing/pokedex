@@ -137,7 +137,7 @@ func mapOutputVals(urlToCall string, isNext bool, w io.Writer, c *cache.Cache, a
 		return
 	}
 
-	next, prev, values, callErr := a.CallMapURL(isNext)
+	next, prev, values, callErr := a.CallMapUrl(isNext)
 	// if error occured during the API call dur to connection, print the error and return
 	if callErr != nil {
 		fmt.Fprintln(w, callErr.Error())

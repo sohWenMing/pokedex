@@ -205,3 +205,22 @@ func TestGetCommandString(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCommandExploreLocation(t *testing.T) {
+	gotCommand, _ := GetCommand("explore this location")
+	gotCommandName := gotCommand.name
+	wantCommandName := exploreCommand.name
+	assertStrings(gotCommandName, wantCommandName, t)
+}
+
+// func TestGetCommadnAndFireCallBackExplore(t *testing.T) {
+// 	buf := bytes.Buffer{}
+// 	cache := cache.NewCache(2 * time.Second)
+// 	apiConfig := apiCfg.GenNewApiConfig()
+
+// 	type testStruct struct {
+// 		name, inputString string
+
+// 	}
+
+// }

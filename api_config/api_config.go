@@ -66,7 +66,7 @@ func (a *ApiConfig) SetPrev(prev string) {
 	a.prev = prev
 }
 
-func (a *ApiConfig) CallUrl(isNext bool) (next, prev string, results []MapValue, err error) {
+func (a *ApiConfig) CallMapURL(isNext bool) (next, prev string, results []MapValue, err error) {
 
 	if isNext {
 		if a.next == "" {

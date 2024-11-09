@@ -62,7 +62,7 @@ func mapCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_lo
 
 	// check the information in the cache
 	urlToCall := a.GetNext()
-	outputValues(urlToCall, true, w, c, a)
+	mapOutputVals(urlToCall, true, w, c, a)
 
 	return false
 }
@@ -71,7 +71,7 @@ func mapBCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_l
 	fmt.Fprintf(w, "getting information...\n")
 
 	urlToCall := a.GetPrev()
-	outputValues(urlToCall, false, w, c, a)
+	mapOutputVals(urlToCall, false, w, c, a)
 	return false
 }
 
@@ -125,7 +125,7 @@ func printLines(w io.Writer, strings []string) {
 	}
 }
 
-func outputValues(urlToCall string, isNext bool, w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) {
+func mapOutputVals(urlToCall string, isNext bool, w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) {
 
 	//if the values can be found in the cache, the write to the writer and exit early
 	next, prev, firstCacheCallValues, firstCacheCallErr := c.GetFromCache(urlToCall)
@@ -137,7 +137,7 @@ func outputValues(urlToCall string, isNext bool, w io.Writer, c *cache.Cache, a 
 		return
 	}
 
-	next, prev, values, callErr := a.CallUrl(isNext)
+	next, prev, values, callErr := a.CallMapURL(isNext)
 	// if error occured during the API call dur to connection, print the error and return
 	if callErr != nil {
 		fmt.Fprintln(w, callErr.Error())

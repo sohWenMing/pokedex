@@ -25,14 +25,14 @@ func TestResetAPIConfigOnNext(t *testing.T) {
 	apiConfig := GenNewApiConfig()
 	apiConfig.next = ""
 	assertStrings(apiConfig.next, "", t)
-	apiConfig.CallUrl(true)
+	apiConfig.CallMapURL(true)
 	assertStrings(apiConfig.next, startingURL, t)
 }
 
 func TestCallNextURL(t *testing.T) {
 	apiConfig := GenNewApiConfig()
 
-	next, prev, results, err := apiConfig.CallUrl(true)
+	next, prev, results, err := apiConfig.CallMapURL(true)
 	// call the API once, get the next 20 records
 	assertNoError(err, t)
 	assertStrings(apiConfig.next, urlPage2, t)
@@ -43,7 +43,7 @@ func TestCallNextURL(t *testing.T) {
 	//in the config, prev should still in blank
 	assertVals(len(results), 20, t)
 
-	next2, prev2, results2, err2 := apiConfig.CallUrl(true)
+	next2, prev2, results2, err2 := apiConfig.CallMapURL(true)
 	assertNoError(err2, t)
 	assertStrings(apiConfig.next, urlPage3, t)
 	assertStrings(next2, apiConfig.next, t)
@@ -58,21 +58,21 @@ func TestCallPrevUrl(t *testing.T) {
 	apiConfig := GenNewApiConfig()
 
 	//assert that trying to get prev url when it doesn't exist in the apiconfig yet should return an error
-	_, _, _, err := apiConfig.CallUrl(false)
+	_, _, _, err := apiConfig.CallMapURL(false)
 	errorHelpers.AssertError(err, t)
 
 	// call next on the first url, no error should be returned
-	firstNext, firstPrev, firstResults, firstCallErr := apiConfig.CallUrl(true)
+	firstNext, firstPrev, firstResults, firstCallErr := apiConfig.CallMapURL(true)
 	assertNoError(firstCallErr, t)
 
 	//at this point, prev should be null, as we are at the first page. should return error
-	_, _, _, errFromPrev := apiConfig.CallUrl(false)
+	_, _, _, errFromPrev := apiConfig.CallMapURL(false)
 	errorHelpers.AssertError(errFromPrev, t)
 
 	//call the API one more time to get to the second page
-	apiConfig.CallUrl(true)
+	apiConfig.CallMapURL(true)
 
-	secondNext, secondPrev, secondResults, secondCallErr := apiConfig.CallUrl(false)
+	secondNext, secondPrev, secondResults, secondCallErr := apiConfig.CallMapURL(false)
 	assertNoError(secondCallErr, t)
 	assertStrings(firstNext, secondNext, t)
 	assertStrings(firstPrev, secondPrev, t)

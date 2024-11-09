@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 )
 
-type ApiConfig struct {
-	next string
-	prev string
-}
+/*
+======================================================
 
+# JSON STRUCTS - START
+
+======================================================
+*/
 type MapJsonResponse struct {
 	Count    int    `json:"count"`
 	Next     string `json:"next"`
@@ -21,11 +24,6 @@ type MapJsonResponse struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	} `json:"results"`
-}
-
-type MapValue struct {
-	Name string
-	URL  string
 }
 
 type ExploreJSONResponse struct {
@@ -118,6 +116,31 @@ type PokedexJsonResponse struct {
 	} `json:"version_groups"`
 }
 
+/*
+======================================================
+
+JSON STRUCTS - END
+
+======================================================
+*/
+
+/*
+======================================================
+
+# OTHER STRUCT DEFINITIONS - START
+
+======================================================
+*/
+type ApiConfig struct {
+	next string
+	prev string
+}
+
+type MapValue struct {
+	Name string
+	URL  string
+}
+
 type PokemonEntry struct {
 	EntryNumber    int
 	PokemonSpecies struct {
@@ -126,25 +149,39 @@ type PokemonEntry struct {
 	}
 }
 
-const startingURL = "https://pokeapi.co/api/v2/location/"
+/*
+======================================================
 
-var blankJsonResults = []MapValue{}
+OTHER STRUCT DEFINITIONS - END
 
+======================================================
+*/
+
+const baseURL = "https://pokeapi.co/api/v2"
+const locationURL = baseURL + "/location/"
+const exploreURL = baseURL + "/location-area/"
+
+/*
+======================================================
+
+# API CONFIGURATIONS - START
+
+======================================================
+*/
 func GenNewApiConfig() *ApiConfig {
 	apiConfig := ApiConfig{
-		next: startingURL,
+		next: locationURL,
 		prev: "",
 	}
 	return &apiConfig
 }
-
 func (a *ApiConfig) SetConfig(next, prev string) {
 	a.next = next
 	a.prev = prev
 }
 
 func (a *ApiConfig) resetConfig() {
-	a.SetConfig(startingURL, "")
+	a.SetConfig(locationURL, "")
 }
 
 func (a *ApiConfig) GetNext() string {
@@ -163,8 +200,16 @@ func (a *ApiConfig) SetPrev(prev string) {
 	a.prev = prev
 }
 
-func (a *ApiConfig) CallMapUrl(isNext bool) (next, prev string, results []MapValue, err error) {
+/*
+======================================================
 
+API CONFIGURATIONS - END
+
+======================================================
+*/
+
+func (a *ApiConfig) CallMapUrl(isNext bool) (next, prev string, results []MapValue, err error) {
+	blankJsonResults := []MapValue{}
 	if isNext {
 		if a.next == "" {
 			a.resetConfig()
@@ -211,20 +256,47 @@ func (a *ApiConfig) CallMapUrl(isNext bool) (next, prev string, results []MapVal
 	return jsonResponse.Next, jsonResponse.Previous, jsonResults, nil
 }
 
-func GetPokemonByLocation(location string) (pokedexURLS []string, err error) {
-	regionUrl, regionErr := callExploreURL(location)
+func GetPokemonByLocationRegion(location string) (pokemon []PokemonEntry, err error) {
+	regionUrl, regionErr := callLocationRegionURL(location)
 	if regionErr != nil {
-		return []string{}, regionErr
+		return []PokemonEntry{}, regionErr
 	}
 
 	pokedexUrls, pokedexUrlsErr := callRegionURLToGetPokedexURLS(regionUrl)
 
 	if pokedexUrlsErr != nil {
-		return []string{}, pokedexUrlsErr
+		return []PokemonEntry{}, pokedexUrlsErr
 	}
 
-	return pokedexUrls, nil
+	return getPokemonInfoByPokedexUrls(pokedexUrls), nil
+}
 
+func getPokemonInfoByPokedexUrls(pokedexUrls []string) (pokemon []PokemonEntry) {
+
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(len(pokedexUrls))
+
+	pokemonChan := make(chan []PokemonEntry)
+
+	for _, pokedexUrl := range pokedexUrls {
+		url := pokedexUrl
+		go func(url string) {
+			defer waitGroup.Done()
+			pokemonEntries := getPokemonInfo(url)
+			pokemonChan <- pokemonEntries
+		}(url)
+	}
+
+	go func() {
+		waitGroup.Wait()
+		close(pokemonChan)
+	}()
+
+	for pokeData := range pokemonChan {
+		pokemon = append(pokemon, pokeData...)
+	}
+
+	return pokemon
 }
 
 func getPokemonInfo(url string) (pokemonEntries []PokemonEntry) {
@@ -254,8 +326,8 @@ func getPokemonInfo(url string) (pokemonEntries []PokemonEntry) {
 	return returnedEntries
 }
 
-func callExploreURL(location string) (regionUrl string, err error) {
-	urlToCall := startingURL + location
+func callLocationRegionURL(area string) (regionUrl string, err error) {
+	urlToCall := locationURL + area
 
 	bodyBytes, bodyBytesErr := getBodyBytes(urlToCall)
 	if bodyBytesErr != nil {
@@ -288,10 +360,12 @@ func callRegionURLToGetPokedexURLS(urlToCall string) (pokedexURLS []string, err 
 
 func getBodyBytes(url string) (bodyBytes []byte, err error) {
 	res, responseErr := http.Get(url)
+	if res != nil {
+		defer res.Body.Close()
+	}
 	if responseErr != nil {
 		return []byte{}, responseErr
 	}
-
 	checkErr := checkResponseErrAndStatus(res, responseErr)
 
 	if checkErr != nil {
@@ -302,7 +376,6 @@ func getBodyBytes(url string) (bodyBytes []byte, err error) {
 		return []byte{}, readErr
 	}
 	return bodyBytes, nil
-
 }
 
 func checkResponseErrAndStatus(res *http.Response, errorFromGet error) (err error) {

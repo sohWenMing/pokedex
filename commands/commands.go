@@ -75,12 +75,18 @@ func mapBCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit b
 	return false
 }
 
+func exploreCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
+	fmt.Println("explore callback was called")
+	return false
+}
+
 var (
 	helpCommand    = command{"help", helpCallBack}
 	exitCommand    = command{"exit", exitCallBack}
 	defaultCommand = command{"default", defaultCallBack}
 	mapCommand     = command{"map", mapCallBack}
 	mapBCommand    = command{"mapb", mapBCallBack}
+	exploreCommand = command{"explore", exploreCallBack}
 )
 
 var commandMap = map[string]command{
@@ -89,6 +95,7 @@ var commandMap = map[string]command{
 	"default": defaultCommand,
 	"map":     mapCommand,
 	"mapb":    mapBCommand,
+	"explore": exploreCommand,
 }
 
 func GetCommandAndFireCallBack(
@@ -96,6 +103,7 @@ func GetCommandAndFireCallBack(
 	w io.Writer,
 	c *cache.Cache,
 	a *apiConfig.ApiConfig) (isExit bool) {
+
 	command := GetCommand(inputString)
 	isExit = command.Callback(w, c, a)
 	return isExit
@@ -108,7 +116,7 @@ func GetCommand(input string) command {
 	if !ok {
 		return commandMap["default"]
 	}
-	return commandMap[formattedInput]
+	return commandMap[commandString]
 }
 
 func printLines(w io.Writer, strings []string) {
@@ -179,8 +187,11 @@ func getCommandString(formattedInput string) (commandString, location string) {
 		location = ""
 		return
 	}
+
 	splitStrings := strings.SplitAfterN(formattedInput, " ", 2)
+
 	commandString = helpers.ToLowerAndTrim(splitStrings[0])
+
 	location = helpers.ToLowerAndTrim(splitStrings[1])
 	return
 }

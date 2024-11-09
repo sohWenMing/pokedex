@@ -14,7 +14,7 @@ import (
 
 type command struct {
 	name     string
-	Callback func(io.Writer, *cache.Cache, *apiConfig.ApiConfig) (isExit bool)
+	Callback func(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool)
 }
 
 var defaultCallBackLines = []string{
@@ -42,22 +42,22 @@ var helpCallBackLines = []string{
 	"exits the pokedex",
 }
 
-func defaultCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
+func defaultCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool) {
 	printLines(w, defaultCallBackLines)
 	return false
 }
 
-func exitCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
+func exitCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool) {
 	prompts.PrintExitPrompt(w)
 	return true
 }
 
-func helpCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
+func helpCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool) {
 	printLines(w, helpCallBackLines)
 	return false
 }
 
-func mapCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
+func mapCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool) {
 	fmt.Fprintf(w, "getting information...\n")
 
 	// check the information in the cache
@@ -67,7 +67,7 @@ func mapCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bo
 	return false
 }
 
-func mapBCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
+func mapBCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool) {
 	fmt.Fprintf(w, "getting information...\n")
 
 	urlToCall := a.GetPrev()
@@ -75,7 +75,7 @@ func mapBCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit b
 	return false
 }
 
-func exploreCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig) (isExit bool) {
+func exploreCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool) {
 	fmt.Println("explore callback was called")
 	return false
 }
@@ -104,19 +104,19 @@ func GetCommandAndFireCallBack(
 	c *cache.Cache,
 	a *apiConfig.ApiConfig) (isExit bool) {
 
-	command := GetCommand(inputString)
-	isExit = command.Callback(w, c, a)
+	command, location := GetCommand(inputString)
+	isExit = command.Callback(w, c, a, location)
 	return isExit
 }
 
-func GetCommand(input string) command {
+func GetCommand(input string) (command command, location string) {
 	formattedInput := helpers.ToLowerAndTrim(input)
-	commandString, _ := getCommandString(formattedInput)
+	commandString, location := getCommandString(formattedInput)
 	_, ok := commandMap[commandString]
 	if !ok {
-		return commandMap["default"]
+		return commandMap["default"], ""
 	}
-	return commandMap[commandString]
+	return commandMap[commandString], location
 }
 
 func printLines(w io.Writer, strings []string) {

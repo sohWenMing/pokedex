@@ -21,7 +21,6 @@ func TestGetCommand(t *testing.T) {
 	type testStruct struct {
 		name  string
 		input string
-		got   string
 		want  string
 	}
 
@@ -29,32 +28,29 @@ func TestGetCommand(t *testing.T) {
 		{
 			"testing default",
 			"should get default",
-			GetCommand("should get default").name,
 			defaultCommand.name,
 		},
 		{
 			"testing help",
 			"help",
-			GetCommand("help").name,
 			helpCommand.name,
 		},
 		{
 			"testing exit",
 			"exit",
-			GetCommand("exit").name,
 			exitCommand.name,
 		},
 		{
 			"testing upper and lower",
 			" eXiT      ",
-			GetCommand("exit").name,
 			exitCommand.name,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assertStrings(test.got, test.want, t)
+			gotCommand, _ := GetCommand(test.input)
+			assertStrings(gotCommand.name, test.want, t)
 		})
 	}
 }
@@ -65,7 +61,7 @@ func TestDefaultAndExitCallBack(t *testing.T) {
 	apiconfig := apiCfg.GenNewApiConfig()
 
 	//testing the printout from the default callback
-	defaultCallBack(&buf, cache, apiconfig)
+	defaultCallBack(&buf, cache, apiconfig, "")
 	scanner := bufio.NewScanner(&buf)
 	got := []string{}
 
@@ -81,7 +77,7 @@ func TestDefaultAndExitCallBack(t *testing.T) {
 	//testing the printout from the exit callBack
 	exitBuf := bytes.Buffer{}
 	wantBuf := bytes.Buffer{}
-	exitCallBack(&exitBuf, cache, apiconfig)
+	exitCallBack(&exitBuf, cache, apiconfig, "")
 
 	gotExitPrompt := exitBuf.String()
 
@@ -103,7 +99,7 @@ func TestMapCallBack(t *testing.T) {
 	testErrorHelpers.AssertReflectDeepEqual(cacheCallValues, []apiCfg.MapValue{}, t)
 
 	buf := bytes.Buffer{}
-	mapCallBack(&buf, cache, apiconfig)
+	mapCallBack(&buf, cache, apiconfig, "")
 	//function should call the API, and write returned values to cache
 
 	scanner := bufio.NewScanner(&buf)

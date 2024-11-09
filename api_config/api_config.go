@@ -28,6 +28,7 @@ type MapValue struct {
 	URL  string
 }
 
+const baseURL = "https://pokeapi.co/api/v2/"
 const startingURL = "https://pokeapi.co/api/v2/location/"
 
 var blankJsonResults = []MapValue{}

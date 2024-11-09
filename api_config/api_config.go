@@ -16,7 +16,7 @@ import (
 
 ======================================================
 */
-type MapJsonResponse struct {
+type MapJSONResponse struct {
 	Count    int    `json:"count"`
 	Next     string `json:"next"`
 	Previous string `json:"previous"`
@@ -26,7 +26,7 @@ type MapJsonResponse struct {
 	} `json:"results"`
 }
 
-type ExploreJSONResponse struct {
+type LocationRegionJSONResponse struct {
 	Areas []struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
@@ -81,7 +81,7 @@ type RegionJSONResponse struct {
 	} `json:"version_groups"`
 }
 
-type PokedexJsonResponse struct {
+type PokedexJSONResponse struct {
 	Descriptions []struct {
 		Description string `json:"description"`
 		Language    struct {
@@ -116,6 +116,59 @@ type PokedexJsonResponse struct {
 	} `json:"version_groups"`
 }
 
+type ExploreJSONResponse struct {
+	EncounterMethodRates []struct {
+		EncounterMethod struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"encounter_method"`
+		VersionDetails []struct {
+			Rate    int `json:"rate"`
+			Version struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			} `json:"version"`
+		} `json:"version_details"`
+	} `json:"encounter_method_rates"`
+	GameIndex int `json:"game_index"`
+	ID        int `json:"id"`
+	Location  struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"location"`
+	Name  string `json:"name"`
+	Names []struct {
+		Language struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"language"`
+		Name string `json:"name"`
+	} `json:"names"`
+	PokemonEncounters []struct {
+		Pokemon struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"pokemon"`
+		VersionDetails []struct {
+			EncounterDetails []struct {
+				Chance          int           `json:"chance"`
+				ConditionValues []interface{} `json:"condition_values"`
+				MaxLevel        int           `json:"max_level"`
+				Method          struct {
+					Name string `json:"name"`
+					URL  string `json:"url"`
+				} `json:"method"`
+				MinLevel int `json:"min_level"`
+			} `json:"encounter_details"`
+			MaxChance int `json:"max_chance"`
+			Version   struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			} `json:"version"`
+		} `json:"version_details"`
+	} `json:"pokemon_encounters"`
+}
+
 /*
 ======================================================
 
@@ -147,6 +200,11 @@ type PokemonEntry struct {
 		Name string
 		URL  string
 	}
+}
+
+type Pokemon struct {
+	Name string
+	URL  string
 }
 
 /*
@@ -208,6 +266,32 @@ API CONFIGURATIONS - END
 ======================================================
 */
 
+func CallExploreUrl(area string) (pokemon []Pokemon, err error) {
+
+	emptyPokemon := []Pokemon{}
+	urlToCall := exploreURL + area
+	bodyBytes, bodyBytesErr := getBodyBytes(urlToCall)
+	if bodyBytesErr != nil {
+		return emptyPokemon, bodyBytesErr
+	}
+	var exploreJSONResponse ExploreJSONResponse
+	jsonErr := json.Unmarshal(bodyBytes, &exploreJSONResponse)
+	if jsonErr != nil {
+		return emptyPokemon, jsonErr
+	}
+
+	pokemonReturned := []Pokemon{}
+	pokemonEncounters := exploreJSONResponse.PokemonEncounters
+	for _, pokemon := range pokemonEncounters {
+		currentPokemon := Pokemon{
+			pokemon.Pokemon.Name,
+			pokemon.Pokemon.URL,
+		}
+		pokemonReturned = append(pokemonReturned, currentPokemon)
+	}
+	return pokemonReturned, nil
+}
+
 func (a *ApiConfig) CallMapUrl(isNext bool) (next, prev string, results []MapValue, err error) {
 	blankJsonResults := []MapValue{}
 	if isNext {
@@ -236,7 +320,7 @@ func (a *ApiConfig) CallMapUrl(isNext bool) (next, prev string, results []MapVal
 	if err != nil {
 		return "", "", blankJsonResults, err
 	}
-	var jsonResponse MapJsonResponse
+	var jsonResponse MapJSONResponse
 	jsonErr := json.Unmarshal(bodyBytes, &jsonResponse)
 	if jsonErr != nil {
 		return "", "", blankJsonResults, jsonErr
@@ -305,7 +389,7 @@ func getPokemonInfo(url string) (pokemonEntries []PokemonEntry) {
 	if bodyBytesErr != nil {
 		return emptyEntries
 	}
-	var pokedexJsonResponse PokedexJsonResponse
+	var pokedexJsonResponse PokedexJSONResponse
 	jsonErr := json.Unmarshal(bodyBytes, &pokedexJsonResponse)
 	if jsonErr != nil {
 		return emptyEntries
@@ -333,7 +417,7 @@ func callLocationRegionURL(area string) (regionUrl string, err error) {
 	if bodyBytesErr != nil {
 		return "", bodyBytesErr
 	}
-	var exploreJsonResponse ExploreJSONResponse
+	var exploreJsonResponse LocationRegionJSONResponse
 	jsonErr := json.Unmarshal(bodyBytes, &exploreJsonResponse)
 	if jsonErr != nil {
 		return "", jsonErr
@@ -361,6 +445,7 @@ func callRegionURLToGetPokedexURLS(urlToCall string) (pokedexURLS []string, err 
 func getBodyBytes(url string) (bodyBytes []byte, err error) {
 	res, responseErr := http.Get(url)
 	if res != nil {
+
 		defer res.Body.Close()
 	}
 	if responseErr != nil {

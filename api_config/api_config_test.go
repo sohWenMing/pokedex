@@ -155,3 +155,42 @@ func TestGetPokemonByLocation(t *testing.T) {
 		})
 	}
 }
+
+func TestCallExploreURL(t *testing.T) {
+	type testStruct struct {
+		name, area         string
+		isExpectError      bool
+		expectedNumPokemon int
+	}
+
+	tests := []testStruct{
+		{
+			"should pass and have no error",
+			"1",
+			false,
+			11,
+		},
+		{
+			"should have error",
+			"test-test",
+			true,
+			0,
+		},
+	}
+	for _, test := range tests {
+		{
+			t.Run(test.name, func(t *testing.T) {
+
+				pokemon, err := CallExploreUrl(test.area)
+				switch test.isExpectError {
+				case true:
+					errorHelpers.AssertError(err, t)
+				case false:
+					errorHelpers.AssertNoError(err, t)
+				}
+				got := len(pokemon)
+				errorHelpers.AssertVals(got, test.expectedNumPokemon, t)
+			})
+		}
+	}
+}

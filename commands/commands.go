@@ -17,6 +17,13 @@ type command struct {
 	Callback func(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool)
 }
 
+const (
+	exploreUsageString string = `usage - "explore <enter location here>"`
+	exploreErrorString string = "location entered could not be found. Please try again."
+	exploringString    string = "exploring for pokemon ... "
+	numPokemonsString  string = "number of pokemons in explored location: <num>"
+)
+
 var defaultCallBackLines = []string{
 	"usage:",
 	"help: shows list of commands",
@@ -76,7 +83,32 @@ func mapBCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_l
 }
 
 func exploreCallBack(w io.Writer, c *cache.Cache, a *apiConfig.ApiConfig, explore_location string) (isExit bool) {
-	fmt.Println("explore callback was called")
+
+	// if explore was entered, but no location was entered, then show usage message
+	if explore_location == "" {
+		fmt.Fprint(w, exploreUsageString)
+		return false
+	}
+	// show that the program is searching for pokemon
+	fmt.Fprintln(w, exploringString)
+
+	// get the pokemons by calling the PokeAPI, checking for returned errors
+	pokemons, err := apiConfig.CallExploreUrl(explore_location)
+
+	// if error is returned, show error message
+	if err != nil {
+		fmt.Fprintln(w, exploreErrorString)
+		return false
+	}
+	// first print the number of pokemon found
+
+	numPokemons := len(pokemons)
+	numPokemonsString := helpers.StringReplace(numPokemonsString, "<num>", fmt.Sprintf("%d", numPokemons))
+	fmt.Fprintln(w, numPokemonsString)
+	for _, pokemon := range pokemons {
+
+		fmt.Fprintln(w, pokemon.Name)
+	}
 	return false
 }
 
@@ -111,7 +143,7 @@ func GetCommandAndFireCallBack(
 
 func GetCommand(input string) (command command, location string) {
 	formattedInput := helpers.ToLowerAndTrim(input)
-	commandString, location := getCommandString(formattedInput)
+	commandString, location := getCommandStringAndLocation(formattedInput)
 	_, ok := commandMap[commandString]
 	if !ok {
 		return commandMap["default"], ""
@@ -175,7 +207,7 @@ func checkIsExploreCommand(input string) (isExplore bool, isHasLocation bool) {
 	return
 }
 
-func getCommandString(formattedInput string) (commandString, location string) {
+func getCommandStringAndLocation(formattedInput string) (commandString, location string) {
 	isExplore, isHasLocation := checkIsExploreCommand(formattedInput)
 	if !isExplore {
 		commandString = formattedInput
@@ -192,6 +224,7 @@ func getCommandString(formattedInput string) (commandString, location string) {
 
 	commandString = helpers.ToLowerAndTrim(splitStrings[0])
 
-	location = helpers.ToLowerAndTrim(splitStrings[1])
-	return
+	locationLoweredAndTrimmed := helpers.ToLowerAndTrim(splitStrings[1])
+	location = helpers.ReplaceSpaceWithChar(locationLoweredAndTrimmed, "-")
+	return commandString, location
 }

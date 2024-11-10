@@ -194,12 +194,12 @@ func TestGetCommandString(t *testing.T) {
 		{
 			name:     "test is explore, has location",
 			input:    "explore this location",
-			expected: result{"explore", "this location"},
+			expected: result{"explore", "this-location"},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			commandString, location := getCommandString(test.input)
+			commandString, location := getCommandStringAndLocation(test.input)
 			got := result{commandString, location}
 			testErrorHelpers.AssertReflectDeepEqual(got, test.expected, t)
 		})
@@ -213,14 +213,80 @@ func TestGetCommandExploreLocation(t *testing.T) {
 	assertStrings(gotCommandName, wantCommandName, t)
 }
 
-// func TestGetCommadnAndFireCallBackExplore(t *testing.T) {
-// 	buf := bytes.Buffer{}
-// 	cache := cache.NewCache(2 * time.Second)
-// 	apiConfig := apiCfg.GenNewApiConfig()
+// final integration function to simulate firing the explore command from the program
+func TestEnterExploreCommandFromProgram(t *testing.T) {
+	cache := cache.NewCache(0 * time.Second)
+	apiConfig := apiCfg.GenNewApiConfig()
 
-// 	type testStruct struct {
-// 		name, inputString string
+	//setting up of variables required
 
-// 	}
+	type testStruct struct {
+		name, commandEntered    string
+		expectedStringsInBuffer []string
+	}
 
-// }
+	tests := []testStruct{
+		{
+			name:           "initial calling of test - no location entered",
+			commandEntered: "explore",
+			expectedStringsInBuffer: []string{
+				exploreUsageString,
+			},
+		},
+		{
+			name:           "initial calling of test - no location entered with extra trailing space",
+			commandEntered: "explore      ",
+			expectedStringsInBuffer: []string{
+				exploreUsageString,
+			},
+		},
+		{
+			name:           "initial calling of test - no location entered with extra space both sides",
+			commandEntered: "           explore      ",
+			expectedStringsInBuffer: []string{
+				exploreUsageString,
+			},
+		},
+		{
+			name:           "erroneous location entered",
+			commandEntered: "explore singapore",
+			expectedStringsInBuffer: []string{
+				exploringString,
+				exploreErrorString,
+			},
+		},
+		{
+			name:           "eterna-city entered",
+			commandEntered: "explore 1",
+			expectedStringsInBuffer: []string{
+				exploringString,
+				"number of pokemons in explored location: 11",
+				"tentacool",
+				"tentacruel",
+				"staryu",
+				"magikarp",
+				"gyarados",
+				"wingull",
+				"pelipper",
+				"shellos",
+				"gastrodon",
+				"finneon",
+				"lumineon",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			buf := bytes.Buffer{}
+			scanner := bufio.NewScanner(&buf)
+			GetCommandAndFireCallBack(test.commandEntered, &buf, cache, apiConfig)
+			gotStringsInBuf := []string{}
+			for scanner.Scan() {
+				gotStringsInBuf = append(gotStringsInBuf, scanner.Text())
+			}
+			testErrorHelpers.AssertReflectDeepEqual(gotStringsInBuf, test.expectedStringsInBuffer, t)
+
+		})
+
+	}
+}

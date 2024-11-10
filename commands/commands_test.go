@@ -21,7 +21,6 @@ func TestGetCommand(t *testing.T) {
 	type testStruct struct {
 		name  string
 		input string
-		got   string
 		want  string
 	}
 
@@ -29,32 +28,29 @@ func TestGetCommand(t *testing.T) {
 		{
 			"testing default",
 			"should get default",
-			GetCommand("should get default").name,
 			defaultCommand.name,
 		},
 		{
 			"testing help",
 			"help",
-			GetCommand("help").name,
 			helpCommand.name,
 		},
 		{
 			"testing exit",
 			"exit",
-			GetCommand("exit").name,
 			exitCommand.name,
 		},
 		{
 			"testing upper and lower",
 			" eXiT      ",
-			GetCommand("exit").name,
 			exitCommand.name,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assertStrings(test.got, test.want, t)
+			gotCommand, _ := GetCommand(test.input)
+			assertStrings(gotCommand.name, test.want, t)
 		})
 	}
 }
@@ -65,7 +61,7 @@ func TestDefaultAndExitCallBack(t *testing.T) {
 	apiconfig := apiCfg.GenNewApiConfig()
 
 	//testing the printout from the default callback
-	defaultCallBack(&buf, cache, apiconfig)
+	defaultCallBack(&buf, cache, apiconfig, "")
 	scanner := bufio.NewScanner(&buf)
 	got := []string{}
 
@@ -81,7 +77,7 @@ func TestDefaultAndExitCallBack(t *testing.T) {
 	//testing the printout from the exit callBack
 	exitBuf := bytes.Buffer{}
 	wantBuf := bytes.Buffer{}
-	exitCallBack(&exitBuf, cache, apiconfig)
+	exitCallBack(&exitBuf, cache, apiconfig, "")
 
 	gotExitPrompt := exitBuf.String()
 
@@ -103,7 +99,7 @@ func TestMapCallBack(t *testing.T) {
 	testErrorHelpers.AssertReflectDeepEqual(cacheCallValues, []apiCfg.MapValue{}, t)
 
 	buf := bytes.Buffer{}
-	mapCallBack(&buf, cache, apiconfig)
+	mapCallBack(&buf, cache, apiconfig, "")
 	//function should call the API, and write returned values to cache
 
 	scanner := bufio.NewScanner(&buf)
@@ -125,4 +121,172 @@ func TestMapCallBack(t *testing.T) {
 	}
 	testErrorHelpers.AssertVals(len(locationValues), 20, t)
 
+}
+
+func TestExplore(t *testing.T) {
+	type resultsStruct struct {
+		isExplore     bool
+		isHasLocation bool
+	}
+
+	type testStruct struct {
+		name     string
+		input    string
+		expected resultsStruct
+	}
+
+	tests := []testStruct{
+		{
+			name:  "explore with no suffix",
+			input: "explore",
+			expected: resultsStruct{
+				isExplore:     true,
+				isHasLocation: false,
+			},
+		},
+		{
+			name:  "explore with suffix",
+			input: "explore suffix",
+			expected: resultsStruct{
+				isExplore:     true,
+				isHasLocation: true,
+			},
+		},
+		{
+			name:  "not explore",
+			input: "not explore",
+			expected: resultsStruct{
+				isExplore:     false,
+				isHasLocation: false,
+			},
+		},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+			isExplore, isHasLocation := checkIsExploreCommand(test.input)
+			got := resultsStruct{isExplore, isHasLocation}
+			testErrorHelpers.AssertReflectDeepEqual(got, test.expected, t)
+		})
+	}
+}
+
+func TestGetCommandString(t *testing.T) {
+	type result struct {
+		commandString, location string
+	}
+	type testStruct struct {
+		name, input string
+		expected    result
+	}
+	tests := []testStruct{
+		{
+			name:     "test not explore",
+			input:    "not explore",
+			expected: result{"not explore", ""},
+		},
+		{
+			name:     "test is explore, no location",
+			input:    "explore",
+			expected: result{"explore", ""},
+		},
+		{
+			name:     "test is explore, has location",
+			input:    "explore this location",
+			expected: result{"explore", "this-location"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			commandString, location := getCommandStringAndLocation(test.input)
+			got := result{commandString, location}
+			testErrorHelpers.AssertReflectDeepEqual(got, test.expected, t)
+		})
+	}
+}
+
+func TestGetCommandExploreLocation(t *testing.T) {
+	gotCommand, _ := GetCommand("explore this location")
+	gotCommandName := gotCommand.name
+	wantCommandName := exploreCommand.name
+	assertStrings(gotCommandName, wantCommandName, t)
+}
+
+// final integration function to simulate firing the explore command from the program
+func TestEnterExploreCommandFromProgram(t *testing.T) {
+	cache := cache.NewCache(0 * time.Second)
+	apiConfig := apiCfg.GenNewApiConfig()
+
+	//setting up of variables required
+
+	type testStruct struct {
+		name, commandEntered    string
+		expectedStringsInBuffer []string
+	}
+
+	tests := []testStruct{
+		{
+			name:           "initial calling of test - no location entered",
+			commandEntered: "explore",
+			expectedStringsInBuffer: []string{
+				exploreUsageString,
+			},
+		},
+		{
+			name:           "initial calling of test - no location entered with extra trailing space",
+			commandEntered: "explore      ",
+			expectedStringsInBuffer: []string{
+				exploreUsageString,
+			},
+		},
+		{
+			name:           "initial calling of test - no location entered with extra space both sides",
+			commandEntered: "           explore      ",
+			expectedStringsInBuffer: []string{
+				exploreUsageString,
+			},
+		},
+		{
+			name:           "erroneous location entered",
+			commandEntered: "explore singapore",
+			expectedStringsInBuffer: []string{
+				exploringString,
+				exploreErrorString,
+			},
+		},
+		{
+			name:           "eterna-city entered",
+			commandEntered: "explore 1",
+			expectedStringsInBuffer: []string{
+				exploringString,
+				"number of pokemons in explored location: 11",
+				"tentacool",
+				"tentacruel",
+				"staryu",
+				"magikarp",
+				"gyarados",
+				"wingull",
+				"pelipper",
+				"shellos",
+				"gastrodon",
+				"finneon",
+				"lumineon",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			buf := bytes.Buffer{}
+			scanner := bufio.NewScanner(&buf)
+			GetCommandAndFireCallBack(test.commandEntered, &buf, cache, apiConfig)
+			gotStringsInBuf := []string{}
+			for scanner.Scan() {
+				gotStringsInBuf = append(gotStringsInBuf, scanner.Text())
+			}
+			testErrorHelpers.AssertReflectDeepEqual(gotStringsInBuf, test.expectedStringsInBuffer, t)
+
+		})
+
+	}
 }

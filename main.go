@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	stringutils "github.com/sohWenMing/pokedex_cli/utils"
+	commandcallbacks "github.com/sohWenMing/pokedex_cli/command_callbacks"
 )
 
 func main() {
@@ -16,11 +16,11 @@ func main() {
 		fmt.Print("pokedex> ")
 		scanner.Scan()
 		input := scanner.Text()
-		command, err := getCommand(stringutils.CleanInput(input))
+		err := commandcallbacks.ParseAndExecuteCommand(input)
 		if err != nil {
-			continue
+			fmt.Println("error: ", err)
+			os.Exit(1)
 		}
-		printCommand(command)
 	}
 }
 

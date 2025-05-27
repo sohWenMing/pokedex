@@ -1,17 +1,20 @@
 package commandcallbacks
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/sohWenMing/pokedex_cli/config"
+	structdefinitions "github.com/sohWenMing/pokedex_cli/struct_definitions"
 	stringutils "github.com/sohWenMing/pokedex_cli/utils"
 )
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(*config.Config) error
 }
 
 var exitCliCommand = cliCommand{
@@ -25,20 +28,35 @@ var helpCliCommand = cliCommand{
 	"user entered help or wrong command, show help usage",
 	helpCallBackfunc,
 }
+var mapCliCommand = cliCommand{
+	"map",
+	"gets the next 20 location areas for the Pokemon!",
+	mapCallBackfunc,
+}
 
 var callBackMap map[string]cliCommand = map[string]cliCommand{
 	"exit": exitCliCommand,
 	"help": helpCliCommand,
+	"map":  mapCliCommand,
 }
 
-func ParseAndExecuteCommand(input string) error {
+func ParseAndExecuteCommand(input string, config *config.Config) error {
 	commandStruct, _ := ParseCommand(input)
 	switch commandStruct.name {
 	case "exit":
-		commandStruct.callback()
+		commandStruct.callback(config)
 		return nil
+	case "map":
+		fmt.Println("map was parsed")
+		err := commandStruct.callback(config)
+		if err != nil {
+			fmt.Println("A problem occured when trying to get the information. Please try again")
+			fmt.Println(err)
+		}
+		return nil
+
 	default:
-		commandStruct.callback()
+		commandStruct.callback(config)
 		return nil
 	}
 }
@@ -56,17 +74,39 @@ func ParseCommand(input string) (commandStruct cliCommand, args []string) {
 	return callBack, cleanedInput[1:]
 }
 
-func exitCallBackfunc() error {
+func exitCallBackfunc(*config.Config) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	time.Sleep(1 * time.Second)
 	os.Exit(0)
 	return nil
 }
-func helpCallBackfunc() error {
+func helpCallBackfunc(*config.Config) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("")
 	fmt.Println("help: Displays a help message")
 	fmt.Println("exit: Exit the Pokedex")
+	return nil
+}
+func mapCallBackfunc(c *config.Config) error {
+	c.IncOffset()
+	fmt.Println("offset: ", c.GetOffSet())
+	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=%d&limit=20", c.GetOffSet())
+	fmt.Println("requesturl: ", requesturl)
+	res, err := c.GetClient().Get(requesturl)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	var locAreaResult structdefinitions.LocationAreaResult
+	decoder := json.NewDecoder(res.Body)
+	jsonErr := decoder.Decode(&locAreaResult)
+	if jsonErr != nil {
+		return jsonErr
+	}
+	for _, loc_area := range locAreaResult.Results {
+		fmt.Println(loc_area.Name)
+	}
+
 	return nil
 }

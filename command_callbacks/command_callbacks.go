@@ -34,11 +34,17 @@ var mapCliCommand = cliCommand{
 	"gets the next 20 location areas for the Pokemon!",
 	mapCallBackfunc,
 }
+var mapbCliCommand = cliCommand{
+	"mapb",
+	"gets the previous 20 location areas for the Pokemon!",
+	mapbCallBackfunc,
+}
 
 var callBackMap map[string]cliCommand = map[string]cliCommand{
 	"exit": exitCliCommand,
 	"help": helpCliCommand,
 	"map":  mapCliCommand,
+	"mapb": mapbCliCommand,
 }
 
 func ParseAndExecuteCommand(input string, config *config.Config) error {
@@ -90,21 +96,45 @@ func helpCallBackfunc(*config.Config) error {
 }
 func mapCallBackfunc(c *config.Config) error {
 	c.IncOffset()
+	shouldReturn, err := callLocAreas(c)
+	if shouldReturn {
+		return err
+	}
+
+	return nil
+}
+
+func mapbCallBackfunc(c *config.Config) error {
+	c.DecOffSet()
+	if c.GetOffSet() < 0 {
+		c.ResetOffSet()
+		utils.WriteLine(c.Writer, "You have reached the beginning of the map")
+	}
+	shouldReturn, err := callLocAreas(c)
+	if shouldReturn {
+		return err
+	}
+	return nil
+}
+
+func callLocAreas(c *config.Config) (bool, error) {
 	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=%d&limit=20", c.GetOffSet())
 	header := "##### Location Areas Start #####"
 	footer := "##### Location Areas End   #####"
 
+	utils.WriteLine(c.Writer, "")
 	utils.WriteLine(c.Writer, header)
+	utils.WriteLine(c.Writer, "")
 	res, err := c.GetClient().Get(requesturl)
 	if err != nil {
-		return err
+		return true, err
 	}
 	defer res.Body.Close()
 	var locAreaResult structdefinitions.LocationAreaResult
 	decoder := json.NewDecoder(res.Body)
 	jsonErr := decoder.Decode(&locAreaResult)
 	if jsonErr != nil {
-		return jsonErr
+		return true, jsonErr
 	}
 	for _, loc_area := range locAreaResult.Results {
 		utils.WriteLine(c.Writer, loc_area.Name)
@@ -113,7 +143,8 @@ func mapCallBackfunc(c *config.Config) error {
 		utils.WriteLine(c.Writer, "You have reached the last page of the location areas. Will reset to start of locations on next call.")
 		c.ResetOffSet()
 	}
+	utils.WriteLine(c.Writer, "")
 	utils.WriteLine(c.Writer, footer)
-
-	return nil
+	utils.WriteLine(c.Writer, "")
+	return false, nil
 }

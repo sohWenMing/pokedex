@@ -1,14 +1,18 @@
 package config
 
-import "net/http"
+import (
+	"io"
+	"net/http"
+)
 
 type Config struct {
 	loc_area_offset int
 	client          *http.Client
+	Writer          io.Writer
 }
 
-func InitConfig() Config {
-	return Config{-20, nil}
+func InitConfig(w io.Writer) Config {
+	return Config{-20, nil, w}
 }
 
 func (c *Config) IncOffset() {
@@ -18,6 +22,10 @@ func (c *Config) IncOffset() {
 func (c *Config) DecOffSet() {
 	c.loc_area_offset -= 20
 	return
+}
+
+func (c *Config) ResetOffSet() {
+	c.loc_area_offset = 0
 }
 func (c *Config) GetOffSet() int {
 	return c.loc_area_offset

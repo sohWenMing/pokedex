@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	config := config.InitConfig()
+	config := config.InitConfig(os.Stdout)
 	config.SetClient(httputils.InitClient())
 
 	scanner := bufio.NewScanner(os.Stdin)

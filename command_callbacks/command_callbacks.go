@@ -8,6 +8,7 @@ import (
 
 	"github.com/sohWenMing/pokedex_cli/config"
 	structdefinitions "github.com/sohWenMing/pokedex_cli/struct_definitions"
+	"github.com/sohWenMing/pokedex_cli/utils"
 	stringutils "github.com/sohWenMing/pokedex_cli/utils"
 )
 
@@ -47,7 +48,6 @@ func ParseAndExecuteCommand(input string, config *config.Config) error {
 		commandStruct.callback(config)
 		return nil
 	case "map":
-		fmt.Println("map was parsed")
 		err := commandStruct.callback(config)
 		if err != nil {
 			fmt.Println("A problem occured when trying to get the information. Please try again")
@@ -90,9 +90,11 @@ func helpCallBackfunc(*config.Config) error {
 }
 func mapCallBackfunc(c *config.Config) error {
 	c.IncOffset()
-	fmt.Println("offset: ", c.GetOffSet())
 	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=%d&limit=20", c.GetOffSet())
-	fmt.Println("requesturl: ", requesturl)
+	header := "##### Location Areas Start #####"
+	footer := "##### Location Areas End   #####"
+
+	utils.WriteLine(c.Writer, header)
 	res, err := c.GetClient().Get(requesturl)
 	if err != nil {
 		return err
@@ -105,8 +107,13 @@ func mapCallBackfunc(c *config.Config) error {
 		return jsonErr
 	}
 	for _, loc_area := range locAreaResult.Results {
-		fmt.Println(loc_area.Name)
+		utils.WriteLine(c.Writer, loc_area.Name)
 	}
+	if locAreaResult.Next == "" {
+		utils.WriteLine(c.Writer, "You have reached the last page of the location areas. Will reset to start of locations on next call.")
+		c.ResetOffSet()
+	}
+	utils.WriteLine(c.Writer, footer)
 
 	return nil
 }

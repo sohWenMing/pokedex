@@ -37,6 +37,9 @@ func (c *CacheEntry) WriteBufToStrings() []string {
 	}
 	return returned
 }
+func (c *CacheEntry) GetData() *bytes.Buffer {
+	return c.data
+}
 
 func CreateCacheEntry(values []string) (entry CacheEntry, err error) {
 	buf := &bytes.Buffer{}
@@ -71,6 +74,10 @@ func InitCache(tickerInterval, cacheValidity time.Duration) (cache *Cache, err e
 		clearCacheTicker: time.NewTicker(tickerInterval),
 	}
 	return cache, nil
+}
+
+func (c *Cache) AccessCacheMap() map[string]CacheEntry {
+	return c.cacheMap
 }
 
 func (c *Cache) AccessTicker() *time.Ticker {

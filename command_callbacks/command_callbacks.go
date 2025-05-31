@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sohWenMing/pokedex_cli/config"
+	"github.com/sohWenMing/pokedex_cli/internal"
 	structdefinitions "github.com/sohWenMing/pokedex_cli/struct_definitions"
 	"github.com/sohWenMing/pokedex_cli/utils"
 	stringutils "github.com/sohWenMing/pokedex_cli/utils"
@@ -96,12 +97,20 @@ func helpCallBackfunc(*config.Config) error {
 }
 func mapCallBackfunc(c *config.Config) error {
 	c.IncOffset()
-	shouldReturn, err := callLocAreas(c)
-	if shouldReturn {
-		return err
-	}
+	urlKey := mapLocUrl(c.GetOffSet())
+	isFound, cacheEntry := getFromCache(c.GetCache(), urlKey)
+	if isFound {
+		locs := cacheEntry.WriteBufToStrings()
+		writeLocsFromCachedLocations(c, locs)
+		return nil
 
-	return nil
+	} else {
+		err := callLocAreas(c, urlKey)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 func mapbCallBackfunc(c *config.Config) error {
@@ -110,41 +119,106 @@ func mapbCallBackfunc(c *config.Config) error {
 		c.ResetOffSet()
 		utils.WriteLine(c.Writer, "You have reached the beginning of the map")
 	}
-	shouldReturn, err := callLocAreas(c)
-	if shouldReturn {
-		return err
+	urlKey := mapLocUrl(c.GetOffSet())
+	isFound, cacheEntry := getFromCache(c.GetCache(), urlKey)
+	if isFound {
+		locs := cacheEntry.WriteBufToStrings()
+		writeLocsFromCachedLocations(c, locs)
+		return nil
+
+	} else {
+		err := callLocAreas(c, urlKey)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
-	return nil
 }
 
-func callLocAreas(c *config.Config) (bool, error) {
-	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=%d&limit=20", c.GetOffSet())
-	header := "##### Location Areas Start #####"
-	footer := "##### Location Areas End   #####"
+func callLocAreas(c *config.Config, url string) error {
 
-	utils.WriteLine(c.Writer, "")
-	utils.WriteLine(c.Writer, header)
-	utils.WriteLine(c.Writer, "")
-	res, err := c.GetClient().Get(requesturl)
+	res, err := c.GetClient().Get(url)
 	if err != nil {
-		return true, err
+		return err
 	}
 	defer res.Body.Close()
 	var locAreaResult structdefinitions.LocationAreaResult
 	decoder := json.NewDecoder(res.Body)
 	jsonErr := decoder.Decode(&locAreaResult)
 	if jsonErr != nil {
-		return true, jsonErr
+		return jsonErr
 	}
-	for _, loc_area := range locAreaResult.Results {
-		utils.WriteLine(c.Writer, loc_area.Name)
+	writeLocsFromLocationAreaResult(c, locAreaResult)
+	err = cacheLocationAreaResults(c, url, locAreaResult)
+	if err != nil {
+		deleteErrorWriteFromCache(c, url)
 	}
 	if locAreaResult.Next == "" {
 		utils.WriteLine(c.Writer, "You have reached the last page of the location areas. Will reset to start of locations on next call.")
 		c.ResetOffSet()
 	}
+	return nil
+}
+
+func cacheLocationAreaResults(c *config.Config, url string, locaAreaResult structdefinitions.LocationAreaResult) error {
+	names := make([]string, 0, len(locaAreaResult.Results))
+	for _, result := range locaAreaResult.Results {
+		name := result.Name
+		names = append(names, name)
+	}
+	err := c.GetCache().WriteToCache(url, names)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteErrorWriteFromCache(c *config.Config, key string) {
+	_, ok := c.GetCache().AccessCacheMap()[key]
+	if !ok {
+		return
+	}
+	delete(c.GetCache().AccessCacheMap(), key)
+}
+
+func writeLocsFromLocationAreaResult(c *config.Config, locationAreaResult structdefinitions.LocationAreaResult) {
+	header := "##### Location Areas Start #####"
+	footer := "##### Location Areas End   #####"
+	utils.WriteLine(c.Writer, "")
+	utils.WriteLine(c.Writer, header)
+	utils.WriteLine(c.Writer, "")
+	for _, locResult := range locationAreaResult.Results {
+		utils.WriteLine(c.Writer, locResult.Name)
+	}
 	utils.WriteLine(c.Writer, "")
 	utils.WriteLine(c.Writer, footer)
 	utils.WriteLine(c.Writer, "")
-	return false, nil
+
+}
+func writeLocsFromCachedLocations(c *config.Config, locations []string) {
+	header := "##### Location Areas Start #####"
+	footer := "##### Location Areas End   #####"
+	utils.WriteLine(c.Writer, "")
+	utils.WriteLine(c.Writer, header)
+	utils.WriteLine(c.Writer, "")
+	for _, locResult := range locations {
+		utils.WriteLine(c.Writer, locResult)
+	}
+	utils.WriteLine(c.Writer, "")
+	utils.WriteLine(c.Writer, footer)
+	utils.WriteLine(c.Writer, "")
+
+}
+
+func mapLocUrl(offset int) string {
+	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=%d&limit=20", offset)
+	return requesturl
+}
+
+func getFromCache(c *internal.Cache, key string) (isFound bool, cacheEntry internal.CacheEntry) {
+	entry, ok := c.AccessCacheMap()[key]
+	if !ok {
+		return false, internal.CacheEntry{}
+	}
+	return true, entry
 }

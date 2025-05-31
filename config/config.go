@@ -3,16 +3,24 @@ package config
 import (
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/sohWenMing/pokedex_cli/internal"
 )
 
 type Config struct {
 	loc_area_offset int
 	client          *http.Client
 	Writer          io.Writer
+	cache           *internal.Cache
 }
 
-func InitConfig(w io.Writer) Config {
-	return Config{-20, nil, w}
+func InitConfig(w io.Writer, tickerInterval, cacheValidity time.Duration) (config Config, err error) {
+	cache, err := internal.InitCache(tickerInterval, cacheValidity)
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{-20, nil, w, cache}, nil
 }
 
 func (c *Config) IncOffset() {
@@ -36,6 +44,10 @@ func (c *Config) SetClient(initClient *http.Client) {
 }
 func (c *Config) GetClient() *http.Client {
 	return c.client
+}
+
+func (c *Config) GetCache() *internal.Cache {
+	return c.cache
 }
 
 /*

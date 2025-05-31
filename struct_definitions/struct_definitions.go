@@ -9,3 +9,8 @@ type LocationAreaResult struct {
 		URL  string `json:"url"`
 	} `json:"results"`
 }
+
+type Result struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}

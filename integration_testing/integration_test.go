@@ -3,6 +3,7 @@ package integrationtesting
 import (
 	"io"
 	"testing"
+	"time"
 
 	commandcallbacks "github.com/sohWenMing/pokedex_cli/command_callbacks"
 	"github.com/sohWenMing/pokedex_cli/config"
@@ -10,14 +11,16 @@ import (
 )
 
 func TestResetOffset(t *testing.T) {
-	config := config.InitConfig(io.Discard)
+	config, err := config.InitConfig(io.Discard, 1*time.Second, 1*time.Second)
+	if err != nil {
+		t.Errorf("\ndidn't expect error, got %v", err)
+	}
 	config.SetClient(httputils.InitClient())
 
 	for config.GetOffSet() <= 10000 {
 		config.IncOffset()
 	}
-
-	err := commandcallbacks.ParseAndExecuteCommand("map", &config)
+	err = commandcallbacks.ParseAndExecuteCommand("map", &config)
 	if err != nil {
 		t.Errorf("\ndidn't expect error, got %v", err)
 	}

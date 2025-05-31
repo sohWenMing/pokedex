@@ -54,8 +54,27 @@ func CreateCacheEntry(values []string) (entry CacheEntry, err error) {
 }
 
 type Cache struct {
-	cacheMap map[string]CacheEntry
-	mu       sync.RWMutex
+	cacheMap         map[string]CacheEntry
+	mu               sync.RWMutex
+	clearCacheTicker *time.Ticker
+	cacheValidity    time.Duration
+}
+
+func InitCache(tickerInterval, cacheValidity time.Duration) (cache *Cache, err error) {
+	if tickerInterval < 0 {
+		return nil, errors.New("tickerDuration must be positive value")
+	}
+	cacheMap := make(map[string]CacheEntry)
+
+	cache = &Cache{
+		cacheMap:         cacheMap,
+		clearCacheTicker: time.NewTicker(tickerInterval),
+	}
+	return cache, nil
+}
+
+func (c *Cache) AccessTicker() *time.Ticker {
+	return c.clearCacheTicker
 }
 
 func (c *Cache) WriteToCache(key string, values []string) error {
@@ -72,10 +91,13 @@ func (c *Cache) WriteToCache(key string, values []string) error {
 	return nil
 }
 
-func InitCache() *Cache {
-	cacheMap := make(map[string]CacheEntry)
-	cache := &Cache{
-		cacheMap: cacheMap,
+func (c *Cache) RemoveOutdated() (removedKeys []string) {
+	removedKeys = []string{}
+	for key, entry := range c.cacheMap {
+		if entry.createdAt.Add(c.cacheValidity).After(time.Now()) {
+			removedKeys = append(removedKeys, key)
+			delete(c.cacheMap, key)
+		}
 	}
-	return cache
+	return removedKeys
 }

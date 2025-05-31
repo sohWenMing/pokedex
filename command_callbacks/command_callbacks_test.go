@@ -11,7 +11,6 @@ import (
 
 func TestNullNext(t *testing.T) {
 	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=10000&limit=20")
-	fmt.Println("requesturl: ", requesturl)
 	res, err := http.Get(requesturl)
 	if err != nil {
 		t.Errorf("didnt expect error: got %v", err)

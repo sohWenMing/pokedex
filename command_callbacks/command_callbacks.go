@@ -97,20 +97,11 @@ func helpCallBackfunc(*config.Config) error {
 }
 func mapCallBackfunc(c *config.Config) error {
 	c.IncOffset()
-	urlKey := mapLocUrl(c.GetOffSet())
-	isFound, cacheEntry := getFromCache(c.GetCache(), urlKey)
-	if isFound {
-		locs := cacheEntry.WriteBufToStrings()
-		writeLocsFromCachedLocations(c, locs)
-		return nil
-
-	} else {
-		err := callLocAreas(c, urlKey)
-		if err != nil {
-			return err
-		}
-		return nil
+	err := getLocationsAreas(c)
+	if err != nil {
+		return err
 	}
+	return nil
 }
 
 func mapbCallBackfunc(c *config.Config) error {
@@ -119,9 +110,18 @@ func mapbCallBackfunc(c *config.Config) error {
 		c.ResetOffSet()
 		utils.WriteLine(c.Writer, "You have reached the beginning of the map")
 	}
+	err := getLocationsAreas(c)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func getLocationsAreas(c *config.Config) error {
 	urlKey := mapLocUrl(c.GetOffSet())
 	isFound, cacheEntry := getFromCache(c.GetCache(), urlKey)
 	if isFound {
+		utils.WriteLine(c.Writer, "Retrieving information from cache")
 		locs := cacheEntry.WriteBufToStrings()
 		writeLocsFromCachedLocations(c, locs)
 		return nil

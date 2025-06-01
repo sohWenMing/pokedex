@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	caughtpokemon "github.com/sohWenMing/pokedex_cli/caught_pokemon"
 	"github.com/sohWenMing/pokedex_cli/internal"
 )
 
@@ -13,6 +14,7 @@ type Config struct {
 	client          *http.Client
 	Writer          io.Writer
 	cache           *internal.Cache
+	caughtPokemon   *caughtpokemon.CaughtPokemon
 }
 
 func InitConfig(w io.Writer, tickerInterval, cacheValidity time.Duration) (config Config, err error) {
@@ -20,7 +22,7 @@ func InitConfig(w io.Writer, tickerInterval, cacheValidity time.Duration) (confi
 	if err != nil {
 		return Config{}, err
 	}
-	return Config{-20, nil, w, cache}, nil
+	return Config{-20, nil, w, cache, caughtpokemon.InitCaughtPokemon()}, nil
 }
 
 func (c *Config) IncOffset() {
@@ -50,14 +52,6 @@ func (c *Config) GetCache() *internal.Cache {
 	return c.cache
 }
 
-/*
-we want to be able to keep track of which page it's on ...
-it will always give me 20 records
-
-for map command, we will increment the config, and then call the API
-for the mapb command, we first check if the config is <= 0, if it is
-then we just show you're on the first page
-
-else: decrement config by 20, and then call the map
-
-*/
+func (c *Config) GetCaughtPokemon() *caughtpokemon.CaughtPokemon {
+	return c.caughtPokemon
+}

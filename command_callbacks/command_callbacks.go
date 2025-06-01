@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/sohWenMing/pokedex_cli/config"
@@ -46,6 +47,11 @@ var exploreCliCommand = cliCommand{
 	"gets list of all the pokemon that are within the are being explored",
 	exploreCallbackfunc,
 }
+var catchCliCommand = cliCommand{
+	"catch",
+	"attempts to catch a pikachu - if pikachu is already caought will alert",
+	catchCallbackfunc,
+}
 
 var callBackMap map[string]cliCommand = map[string]cliCommand{
 	"exit":    exitCliCommand,
@@ -53,6 +59,7 @@ var callBackMap map[string]cliCommand = map[string]cliCommand{
 	"map":     mapCliCommand,
 	"mapb":    mapbCliCommand,
 	"explore": exploreCliCommand,
+	"catch":   catchCliCommand,
 }
 
 func ParseAndExecuteCommand(input string, config *config.Config) error {
@@ -121,7 +128,7 @@ func mapbCallBackfunc(c *config.Config, args []string) error {
 }
 func exploreCallbackfunc(c *config.Config, args []string) error {
 	if len(args) != 1 {
-		return errors.New("number of argumens passed into explore must be only 1")
+		return errors.New("number of arguments passed into explore must be only 1")
 	}
 	urlKey := mapExploreUrl(args[0])
 	err := getExploreResult(c, urlKey)
@@ -129,8 +136,21 @@ func exploreCallbackfunc(c *config.Config, args []string) error {
 		return err
 	}
 	return nil
-
 }
+func catchCallbackfunc(c *config.Config, args []string) error {
+	if len(args) != 1 {
+		return errors.New("number of arguments passed into catch must be only 1")
+	}
+	urlKey := mapCatchResult(args[0])
+	// first thing - work on actually calling the API
+	fmt.Println("calculated url: ", urlKey)
+	err := callCatch(c, urlKey)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func getExploreResult(c *config.Config, urlKey string) error {
 	isFound, cacheEntry := getFromCache(c.GetCache(), urlKey)
 	if isFound {
@@ -140,7 +160,7 @@ func getExploreResult(c *config.Config, urlKey string) error {
 		return nil
 
 	} else {
-		err := callExplore(c, urlKey)
+		err := callExploreAPI(c, urlKey)
 		if err != nil {
 			return err
 		}
@@ -164,6 +184,50 @@ func getLocationsAreas(c *config.Config) error {
 		}
 		return nil
 	}
+}
+func callCatch(c *config.Config, url string) error {
+	splitUrl := strings.Split(url, "/")
+	pokemonName := splitUrl[len(splitUrl)-1]
+
+	_, isFound := c.GetCaughtPokemon().Find(pokemonName)
+	if isFound {
+		utils.WriteLine(c.Writer, fmt.Sprintf("You have already caught %s!", pokemonName))
+		return nil
+	}
+
+	err := callCatchAPI(c, url, pokemonName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func callCatchAPI(c *config.Config, url string, pokemonName string) error {
+	res, err := c.GetClient().Get(url)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	var pokemonResult structdefinitions.Pokemon
+	decoder := json.NewDecoder(res.Body)
+	jsonErr := decoder.Decode(&pokemonResult)
+	if jsonErr != nil {
+		return err
+	}
+	baseExperience := pokemonResult.BaseExperience
+	// stub value for now
+	randResult := baseExperience + 1
+	if randResult >= baseExperience {
+		utils.WriteLine(c.Writer, fmt.Sprintf("caught %s!", pokemonName))
+	} else {
+		utils.WriteLine(c.Writer, fmt.Sprintf("%s escaped!", pokemonName))
+	}
+	err = c.GetCaughtPokemon().Add(pokemonName, pokemonResult)
+	if err != nil {
+		c.GetCaughtPokemon().Delete(pokemonName)
+	}
+	return nil
 }
 
 func callLocAreas(c *config.Config, url string) error {
@@ -190,7 +254,7 @@ func callLocAreas(c *config.Config, url string) error {
 	}
 	return nil
 }
-func callExplore(c *config.Config, url string) error {
+func callExploreAPI(c *config.Config, url string) error {
 
 	res, err := c.GetClient().Get(url)
 	if err != nil {
@@ -289,7 +353,10 @@ func writeLocsFromCachedLocations(c *config.Config, locations []string) {
 func mapExploreUrl(param string) string {
 	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/%s", param)
 	return requesturl
-
+}
+func mapCatchResult(param string) string {
+	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s", param)
+	return requesturl
 }
 
 func mapLocUrl(offset int) string {

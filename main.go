@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"time"
 
 	commandcallbacks "github.com/sohWenMing/pokedex_cli/command_callbacks"
 	config "github.com/sohWenMing/pokedex_cli/config"
@@ -11,7 +12,11 @@ import (
 )
 
 func main() {
-	config := config.InitConfig(os.Stdout)
+	config, err := config.InitConfig(os.Stdout, 1*time.Minute, 5*time.Minute)
+	if err != nil {
+		fmt.Println("an error occured: exiting program")
+		os.Exit(1)
+	}
 	config.SetClient(httputils.InitClient())
 
 	scanner := bufio.NewScanner(os.Stdin)

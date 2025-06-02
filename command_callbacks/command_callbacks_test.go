@@ -24,5 +24,14 @@ func TestNullNext(t *testing.T) {
 	}
 	fmt.Printf("\nvalue of next: %v", locAreaResult.Next)
 	fmt.Printf("\nIs next blank: %v", locAreaResult.Next == "")
+}
 
+func TestNonExistingPokemon(t *testing.T) {
+	pokemon := "thishouldfail"
+	url := mapCatchUrl(pokemon)
+	res, err := http.Get(url)
+	if err == nil {
+		fmt.Print(err)
+	}
+	fmt.Println("status code: ", res.StatusCode)
 }

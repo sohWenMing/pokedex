@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -103,6 +104,9 @@ func helpCallBackfunc(c *config.Config, args []string) error {
 	fmt.Println("")
 	fmt.Println("help: Displays a help message")
 	fmt.Println("exit: Exit the Pokedex")
+	fmt.Println("map: Displays the next 20 locations in the pokemon world")
+	fmt.Println("mapb: Displays the previous 20 locations in the pokemon world")
+
 	return nil
 }
 func mapCallBackfunc(c *config.Config, args []string) error {
@@ -141,9 +145,8 @@ func catchCallbackfunc(c *config.Config, args []string) error {
 	if len(args) != 1 {
 		return errors.New("number of arguments passed into catch must be only 1")
 	}
-	urlKey := mapCatchResult(args[0])
+	urlKey := mapCatchUrl(args[0])
 	// first thing - work on actually calling the API
-	fmt.Println("calculated url: ", urlKey)
 	err := callCatch(c, urlKey)
 	if err != nil {
 		return err
@@ -204,9 +207,14 @@ func callCatch(c *config.Config, url string) error {
 }
 
 func callCatchAPI(c *config.Config, url string, pokemonName string) error {
+	utils.WriteLine(c.Writer, fmt.Sprintf("Throwing a Pokeball at %s...", pokemonName))
 	res, err := c.GetClient().Get(url)
 	if err != nil {
 		return err
+	}
+	if res.StatusCode == 404 {
+		utils.WriteLine(c.Writer, "That pokemon doesn't exist! Try again!")
+		return nil
 	}
 	defer res.Body.Close()
 	var pokemonResult structdefinitions.Pokemon
@@ -217,15 +225,17 @@ func callCatchAPI(c *config.Config, url string, pokemonName string) error {
 	}
 	baseExperience := pokemonResult.BaseExperience
 	// stub value for now
-	randResult := baseExperience + 1
+	randResult := rand.Intn(636)
+	fmt.Println("rand result: ", randResult)
+	fmt.Println("base experience: ", baseExperience)
 	if randResult >= baseExperience {
 		utils.WriteLine(c.Writer, fmt.Sprintf("caught %s!", pokemonName))
+		err = c.GetCaughtPokemon().Add(pokemonName, pokemonResult)
+		if err != nil {
+			c.GetCaughtPokemon().Delete(pokemonName)
+		}
 	} else {
 		utils.WriteLine(c.Writer, fmt.Sprintf("%s escaped!", pokemonName))
-	}
-	err = c.GetCaughtPokemon().Add(pokemonName, pokemonResult)
-	if err != nil {
-		c.GetCaughtPokemon().Delete(pokemonName)
 	}
 	return nil
 }
@@ -354,7 +364,7 @@ func mapExploreUrl(param string) string {
 	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/%s", param)
 	return requesturl
 }
-func mapCatchResult(param string) string {
+func mapCatchUrl(param string) string {
 	requesturl := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s", param)
 	return requesturl
 }

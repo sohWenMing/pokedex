@@ -71,7 +71,20 @@ type CleanedPokemonResult struct {
 	Name           string
 	BaseExperience int
 }
+type PokemonStats struct {
+	Hp            int
+	Attack        int
+	Defense       int
+	SpecialAttack int
+	Speed         int
+}
 
+type PokemonInspectStruct struct {
+	Name   string
+	Height int
+	Stats  PokemonStats
+	Types  []string
+}
 type Pokemon struct {
 	Abilities []struct {
 		Ability struct {

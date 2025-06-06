@@ -1,5 +1,10 @@
 package structdefinitions
 
+import (
+	"fmt"
+	"strings"
+)
+
 type LocationAreaResult struct {
 	Count    int    `json:"count"`
 	Next     string `json:"next"`
@@ -72,16 +77,18 @@ type CleanedPokemonResult struct {
 	BaseExperience int
 }
 type PokemonStats struct {
-	Hp            int
-	Attack        int
-	Defense       int
-	SpecialAttack int
-	Speed         int
+	Hp             int
+	Attack         int
+	Defense        int
+	SpecialAttack  int
+	SpecialDefense int
+	Speed          int
 }
 
 type PokemonInspectStruct struct {
 	Name   string
 	Height int
+	Weight int
 	Stats  PokemonStats
 	Types  []string
 }
@@ -353,4 +360,71 @@ type Pokemon struct {
 		} `json:"type"`
 	} `json:"types"`
 	Weight int `json:"weight"`
+}
+
+func (p *Pokemon) InspectPokemon() (stats string) {
+	var b strings.Builder
+	inspectStruct := p.MapCaughtPokemonToInspect()
+
+	b.WriteString(fmt.Sprintln("Name: ", inspectStruct.Name))
+	b.WriteString(fmt.Sprintln("Height: ", inspectStruct.Height))
+	b.WriteString(fmt.Sprintln("Weight: ", inspectStruct.Weight))
+	b.WriteString(fmt.Sprintln("Stats: "))
+	b.WriteString(fmt.Sprintln("    -hp: ", inspectStruct.Stats.Hp))
+	b.WriteString(fmt.Sprintln("    -attack: ", inspectStruct.Stats.Attack))
+	b.WriteString(fmt.Sprintln("    -defense: ", inspectStruct.Stats.Defense))
+	b.WriteString(fmt.Sprintln("    -special-attack: ", inspectStruct.Stats.SpecialAttack))
+	b.WriteString(fmt.Sprintln("    -special-defense: ", inspectStruct.Stats.SpecialDefense))
+	b.WriteString(fmt.Sprintln("    -speed ", inspectStruct.Stats.Speed))
+	b.WriteString(fmt.Sprintln("Types:"))
+	for _, typeString := range inspectStruct.Types {
+		b.WriteString(fmt.Sprintln("    -", typeString))
+	}
+	stats = b.String()
+	return stats
+
+}
+
+func (p *Pokemon) MapCaughtPokemonToInspect() (inspectStruct PokemonInspectStruct) {
+	name := p.Name
+	height := p.Height
+	weight := p.Weight
+
+	hp := 0
+	attack := 0
+	defense := 0
+	specialAttack := 0
+	speed := 0
+
+	for _, stat := range p.Stats {
+		switch stat.Stat.Name {
+		case "hp":
+			hp = stat.BaseStat
+		case "attack":
+			attack = stat.BaseStat
+		case "defense":
+			defense = stat.BaseStat
+		case "special-attack":
+			specialAttack = stat.BaseStat
+		case "speed":
+			speed = stat.BaseStat
+		}
+	}
+
+	pokemonTypes := make([]string, 0, len(p.Types))
+	for _, pokemonType := range p.Types {
+		pokemonTypes = append(pokemonTypes, pokemonType.Type.Name)
+	}
+	return PokemonInspectStruct{
+		Name:   name,
+		Height: height,
+		Weight: weight,
+		Stats: PokemonStats{
+			Hp:            hp,
+			Attack:        attack,
+			Defense:       defense,
+			SpecialAttack: specialAttack,
+			Speed:         speed,
+		},
+	}
 }

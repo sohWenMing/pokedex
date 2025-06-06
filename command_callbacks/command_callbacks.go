@@ -2,7 +2,6 @@ package commandcallbacks
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -53,6 +52,16 @@ var catchCliCommand = cliCommand{
 	"attempts to catch a pikachu - if pikachu is already caought will alert",
 	catchCallbackfunc,
 }
+var inspectCliCommand = cliCommand{
+	"catch",
+	"attempts to catch a pikachu - if pikachu is already caought will alert",
+	inspectCallBackfunc,
+}
+var pokedexCliCommand = cliCommand{
+	"pokedes",
+	"lists all the pokedex the user has already caught",
+	pokedexCallBackfunc,
+}
 
 var callBackMap map[string]cliCommand = map[string]cliCommand{
 	"exit":    exitCliCommand,
@@ -61,6 +70,7 @@ var callBackMap map[string]cliCommand = map[string]cliCommand{
 	"mapb":    mapbCliCommand,
 	"explore": exploreCliCommand,
 	"catch":   catchCliCommand,
+	"inspect": inspectCliCommand,
 }
 
 func ParseAndExecuteCommand(input string, config *config.Config) error {
@@ -72,8 +82,8 @@ func ParseAndExecuteCommand(input string, config *config.Config) error {
 	default:
 		err := commandStruct.callback(config, args)
 		if err != nil {
-			fmt.Println("A problem occured when trying to get the information. Please try again")
-			fmt.Println(err)
+			utilsWriteLine(config, "A problem occured when trying to get the information. Please try again")
+			utilsWriteLine(config, err.Error())
 		}
 		return nil
 	}
@@ -92,20 +102,25 @@ func ParseCommand(input string) (commandStruct cliCommand, args []string) {
 	return callBack, cleanedInput[1:]
 }
 
+func pokedexCallBackfunc(c *config.Config, args []string) error {
+	utilsWriteLine(c, "pokedex command called")
+	return nil
+}
+
 func exitCallBackfunc(c *config.Config, args []string) error {
-	fmt.Println("Closing the Pokedex... Goodbye!")
+	utilsWriteLine(c, "Closing the Pokedex... Goodbye!")
 	time.Sleep(1 * time.Second)
 	os.Exit(0)
 	return nil
 }
 func helpCallBackfunc(c *config.Config, args []string) error {
-	fmt.Println("Welcome to the Pokedex!")
-	fmt.Println("Usage:")
-	fmt.Println("")
-	fmt.Println("help: Displays a help message")
-	fmt.Println("exit: Exit the Pokedex")
-	fmt.Println("map: Displays the next 20 locations in the pokemon world")
-	fmt.Println("mapb: Displays the previous 20 locations in the pokemon world")
+	utilsWriteLine(c, "Welcome to the Pokedex!")
+	utilsWriteLine(c, "Usage:")
+	utilsWriteLine(c, "")
+	utilsWriteLine(c, "help: Displays a help message")
+	utilsWriteLine(c, "exit: Exit the Pokedex")
+	utilsWriteLine(c, "map: Displays the next 20 locations in the pokemon world")
+	utilsWriteLine(c, "mapb: Displays the previous 20 locations in the pokemon world")
 
 	return nil
 }
@@ -132,7 +147,8 @@ func mapbCallBackfunc(c *config.Config, args []string) error {
 }
 func exploreCallbackfunc(c *config.Config, args []string) error {
 	if len(args) != 1 {
-		return errors.New("number of arguments passed into explore must be only 1")
+		utils.WriteLine(c.Writer, usagePrompt("explore", 1))
+		return nil
 	}
 	urlKey := mapExploreUrl(args[0])
 	err := getExploreResult(c, urlKey)
@@ -143,7 +159,8 @@ func exploreCallbackfunc(c *config.Config, args []string) error {
 }
 func catchCallbackfunc(c *config.Config, args []string) error {
 	if len(args) != 1 {
-		return errors.New("number of arguments passed into catch must be only 1")
+		utils.WriteLine(c.Writer, usagePrompt("catch", 1))
+		return nil
 	}
 	urlKey := mapCatchUrl(args[0])
 	// first thing - work on actually calling the API
@@ -152,6 +169,27 @@ func catchCallbackfunc(c *config.Config, args []string) error {
 		return err
 	}
 	return nil
+}
+
+func inspectCallBackfunc(c *config.Config, args []string) error {
+	if len(args) != 1 {
+		utils.WriteLine(c.Writer, usagePrompt("inspect", 1))
+		return nil
+	}
+	pokemonName := args[0]
+	caughtPokemon, isFound := c.GetCaughtPokemon().Find(pokemonName)
+
+	if !isFound {
+		utils.WriteLine(c.Writer, fmt.Sprintf("You haven't yet caught a pokemon called %s", pokemonName))
+	} else {
+		utils.WriteLine(c.Writer, caughtPokemon.InspectPokemon())
+	}
+
+	return nil
+}
+
+func usagePrompt(input string, numArgs int) string {
+	return fmt.Sprintf("number or arguments passed into %s must be only %d", input, numArgs)
 }
 
 func getExploreResult(c *config.Config, urlKey string) error {
@@ -226,8 +264,8 @@ func callCatchAPI(c *config.Config, url string, pokemonName string) error {
 	baseExperience := pokemonResult.BaseExperience
 	// stub value for now
 	randResult := rand.Intn(636)
-	fmt.Println("rand result: ", randResult)
-	fmt.Println("base experience: ", baseExperience)
+	utilsWriteLine(c, fmt.Sprintln("rand result: ", randResult))
+	utilsWriteLine(c, fmt.Sprintln("base experience: ", baseExperience))
 	if randResult >= baseExperience {
 		utils.WriteLine(c.Writer, fmt.Sprintf("caught %s!", pokemonName))
 		err = c.GetCaughtPokemon().Add(pokemonName, pokemonResult)
@@ -380,4 +418,8 @@ func getFromCache(c *internal.Cache, key string) (isFound bool, cacheEntry inter
 		return false, internal.CacheEntry{}
 	}
 	return true, entry
+}
+
+func utilsWriteLine(c *config.Config, input string) {
+	utils.WriteLine(c.Writer, input)
 }

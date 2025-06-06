@@ -18,6 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 	config.SetClient(httputils.InitClient())
+	fmt.Println("Welcome to the Pokedex! Enter help to get instructions.")
 
 	scanner := bufio.NewScanner(os.Stdin)
 

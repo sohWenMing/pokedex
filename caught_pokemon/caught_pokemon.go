@@ -2,6 +2,8 @@ package caughtpokemon
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	structdefinitions "github.com/sohWenMing/pokedex_cli/struct_definitions"
 )
@@ -41,4 +43,15 @@ func (c *CaughtPokemon) Delete(name string) {
 	if found {
 		delete(c.pokeMap, name)
 	}
+}
+func (c *CaughtPokemon) GetNumCaught() int {
+	return c.numCaught
+}
+
+func (c *CaughtPokemon) ListPokemon() string {
+	var b strings.Builder
+	for key, _ := range c.pokeMap {
+		b.WriteString(fmt.Sprintln("- ", key))
+	}
+	return b.String()
 }

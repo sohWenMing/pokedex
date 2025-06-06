@@ -71,6 +71,7 @@ var callBackMap map[string]cliCommand = map[string]cliCommand{
 	"explore": exploreCliCommand,
 	"catch":   catchCliCommand,
 	"inspect": inspectCliCommand,
+	"pokedex": pokedexCliCommand,
 }
 
 func ParseAndExecuteCommand(input string, config *config.Config) error {
@@ -103,7 +104,9 @@ func ParseCommand(input string) (commandStruct cliCommand, args []string) {
 }
 
 func pokedexCallBackfunc(c *config.Config, args []string) error {
-	utilsWriteLine(c, "pokedex command called")
+	utilsWriteLine(c, fmt.Sprintf("Number of pokemon you have caught: %d", c.GetCaughtPokemon().GetNumCaught()))
+	utilsWriteLine(c, "##### POKEMON #####")
+	utilsWriteLine(c, c.GetCaughtPokemon().ListPokemon())
 	return nil
 }
 
@@ -114,16 +117,20 @@ func exitCallBackfunc(c *config.Config, args []string) error {
 	return nil
 }
 func helpCallBackfunc(c *config.Config, args []string) error {
-	utilsWriteLine(c, "Welcome to the Pokedex!")
 	utilsWriteLine(c, "Usage:")
 	utilsWriteLine(c, "")
 	utilsWriteLine(c, "help: Displays a help message")
 	utilsWriteLine(c, "exit: Exit the Pokedex")
 	utilsWriteLine(c, "map: Displays the next 20 locations in the pokemon world")
 	utilsWriteLine(c, "mapb: Displays the previous 20 locations in the pokemon world")
+	utilsWriteLine(c, "explore: Shows all the pokemon that are within an area")
+	utilsWriteLine(c, "catch:  Attempts to catch a pokemon")
+	utilsWriteLine(c, "inspect: Shows the stats of a specific pokemon")
+	utilsWriteLine(c, "pokedex: Lists all the pokemon that have been caught")
 
 	return nil
 }
+
 func mapCallBackfunc(c *config.Config, args []string) error {
 	c.IncOffset()
 	err := getLocationsAreas(c)
@@ -264,10 +271,9 @@ func callCatchAPI(c *config.Config, url string, pokemonName string) error {
 	baseExperience := pokemonResult.BaseExperience
 	// stub value for now
 	randResult := rand.Intn(636)
-	utilsWriteLine(c, fmt.Sprintln("rand result: ", randResult))
-	utilsWriteLine(c, fmt.Sprintln("base experience: ", baseExperience))
 	if randResult >= baseExperience {
 		utils.WriteLine(c.Writer, fmt.Sprintf("caught %s!", pokemonName))
+		utils.WriteLine(c.Writer, "You may now inspect it with the inspect command")
 		err = c.GetCaughtPokemon().Add(pokemonName, pokemonResult)
 		if err != nil {
 			c.GetCaughtPokemon().Delete(pokemonName)
